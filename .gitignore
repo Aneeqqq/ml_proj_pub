@@ -8,9 +8,11 @@ __pycache__/
 # Large dataset — DeepSense 6G Scenario 31 (NOT redistributable; ~22 GB). Download separately.
 scenario31_new/
 
-# Generated splits, model checkpoints, metrics (regenerate via scripts/)
+# Generated splits & model checkpoints (regenerate via scripts/)
 splits/
-outputs/
+outputs/*
+# ...but DO track the small metrics JSONs so results can be shared via git
+!outputs/*.json
 
 # Derived from the (copyrighted) paper PDF — regenerate locally
 _pdf_text.txt
