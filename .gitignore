@@ -1,0 +1,32 @@
+# Virtual env (project-local; never commit)
+.venv/
+
+# Python caches
+__pycache__/
+*.pyc
+
+# Large dataset — DeepSense 6G Scenario 31 (NOT redistributable; ~22 GB). Download separately.
+scenario31_new/
+
+# Generated splits, model checkpoints, metrics (regenerate via scripts/)
+splits/
+outputs/
+
+# Derived from the (copyrighted) paper PDF — regenerate locally
+_pdf_text.txt
+_fig1.png
+_fig2.png
+_pdf_page*.png
+
+# Archives / scratch
+*.zip
+
+# Obsidian local app state
+ML_Proj_Vault/.obsidian/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Copyrighted paper PDF — do not redistribute
+*.pdf

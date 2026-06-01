@@ -1,0 +1,27 @@
+# GPU runtime deps — CUDA build of torch (install into a fresh .venv).
+#
+# The CUDA wheel must match your installed NVIDIA driver/toolkit. The default below is
+# CUDA 12.8 (cu128), which matches torch 2.8.0. If your driver is older, switch the index
+# URL to cu126 (and keep the same versions). Check your setup first:
+#     nvidia-smi                      # shows the max CUDA version your driver supports
+# Pick the largest cuXXX <= that. See SETUP_GPU.md for the full procedure.
+#
+# Install (Windows PowerShell, from ML_Proj_Claude/):
+#     py -3.11 -m venv .venv
+#     .venv\Scripts\python.exe -m pip install --upgrade pip
+#     .venv\Scripts\python.exe -m pip install -r requirements-gpu.txt
+# Then verify:
+#     .venv\Scripts\python.exe -c "import torch; print(torch.__version__, torch.cuda.is_available(), torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'no-gpu')"
+
+--index-url https://download.pytorch.org/whl/cu128
+torch==2.8.0
+torchvision==0.23.0
+
+# non-torch deps come from PyPI (the index-url above only has torch wheels)
+--extra-index-url https://pypi.org/simple
+numpy
+pandas
+Pillow
+pyyaml
+tqdm
+scikit-learn

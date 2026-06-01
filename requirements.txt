@@ -1,0 +1,15 @@
+# Core runtime deps (install into ML_Proj_Claude/.venv only — never global).
+#
+# This file installs the CPU build of torch (works everywhere, no GPU needed).
+# >>> For a GPU run, use requirements-gpu.txt instead (see SETUP_GPU.md). <<<
+
+--extra-index-url https://download.pytorch.org/whl/cpu
+torch==2.8.0
+torchvision==0.23.0
+
+numpy
+pandas
+Pillow
+pyyaml
+tqdm
+scikit-learn

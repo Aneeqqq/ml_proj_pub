@@ -1,0 +1,37 @@
+# Data pipeline config for the blockage-prediction replication (Scenario 31 only).
+# See ML_Proj_Vault/dataset/sequences-and-batching.md and problem-formulation.md.
+
+paths:
+  # CSV with the `label` column (blocked/not_blocked). Relative to ML_Proj_Claude/.
+  csv: scenario31_new/scenario31/scenario31_dev_labelled.csv
+  # Root that the CSV's "./unit1/..." paths are relative to.
+  data_root: scenario31_new/scenario31
+
+window:
+  W: 5            # input frames per window (paper: latest 5 observations)
+  K: 5            # prediction horizon t+1..t+5 (paper: up to 1.5s ahead)
+  # v2: dense, timestamp-based anchoring (see plan/improvement-plan.md). Every native frame is a
+  # window-end; the W inputs and K labels are the frames closest to anchor ± j*step_ms, accepted
+  # only if within tol_ms (else the window is dropped -> never spans a time gap / scene seam).
+  step_ms: 300   # target spacing between observations (paper t=300ms)
+  tol_ms: 130    # max |actual - target| time error to accept a frame (native dt ~92ms median)
+
+split:
+  # Sequence-level, STRATIFIED on blockage presence. Whole seq_index -> one split.
+  ratios: {train: 0.70, val: 0.15, test: 0.15}
+  seed: 42
+
+camera:
+  image_size: 256
+  # ImageNet stats (ResNet-18 backbone is ImageNet-pretrained).
+  norm_mean: [0.485, 0.456, 0.406]
+  norm_std:  [0.229, 0.224, 0.225]
+
+radar:
+  range_bins: 256     # native dim-1
+  doppler_out: 64     # paper target Doppler width (trim/pad from native 250)
+  n_features: 8       # 8 stacked feature maps -> (8, 256, 64)
+
+label:
+  positive: blocked
+  negative: not_blocked

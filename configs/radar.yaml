@@ -1,0 +1,26 @@
+# Radar model + training config. See ML_Proj_Vault/modalities/radar.md.
+# Hyperparams not in the paper are documented defaults (open-questions.md).
+
+model:
+  in_channels: 8
+  horizon: 5
+  lstm_hidden: 64
+  fc_hidden: 64
+  dropout: 0.3
+  conv_channels: [32, 64, 128]   # 8 -> 32 -> 64 -> 128
+
+train:
+  epochs: 30
+  batch_size: 32            # GPU: raise to 32-64
+  lr: 1.0e-3                # single LR (no pretrained backbone)
+  weight_decay: 1.0e-4
+  alpha: 1.1               # pos_weight = alpha * N0/N1
+  num_workers: 8           # GPU: raise to 4-8 (radar I/O is heavy, workers help a lot)
+  amp: true               # mixed precision; auto-disabled when not on CUDA
+  early_stop_patience: 7
+  seed: 42
+  radar_noise_sigma: 0.01  # train-time Gaussian noise on raw cube (paper §III-A1)
+
+norm:
+  path: outputs/radar_norm.npz   # train-set per-channel stats (run scripts.fit_radar_norm first)
+  fit_samples: 800               # frames sampled to fit stats (all blocked + random clear)
