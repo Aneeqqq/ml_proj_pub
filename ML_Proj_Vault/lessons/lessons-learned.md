@@ -65,6 +65,15 @@ Hard-won insights for this replication. Append as we go (newest on top within a 
   `ML_Proj_Claude/scenario31_new/`.
 
 ## Modeling
+- 💡 **AMP (fp16) + near-constant feature channels = frozen training.** After train-set norm, radar's
+  tiny-scale magnitude channels (std ~1e-5) blew up to ~1e5 when divided by std → **fp16 overflow →
+  inf grads → GradScaler skips every optimizer step → train_loss frozen at ~1.407, val AUC random**.
+  It looked fine on CPU (no AMP). Fix: **clip normalized features to an fp16-safe range** (±10) and
+  `nan_to_num`. Lesson: any per-channel normalization feeding an AMP model must be range-bounded. → [[radar]]
+- 💡 **`--smoke` skipped the end-of-training test block, so a bug there shipped unseen.** The first
+  GPU run wrote histories but left a stale `camera_test.json` / no `radar_test.json`. Now the test
+  block is wrapped in try/except with a printed traceback + flushed logs. Smoke-test the *full* path,
+  not just the training loop.
 - 💡 **Decimate-then-window silently destroyed 2/3 of positives.** The first loader did `frames[::3]`
   then windowed → test had only ~6 positives/horizon (F1 = noise) and radar couldn't learn. Switching
   to **dense anchoring + timestamp-based 300 ms selection** kept all positives (test 6→17/horizon,

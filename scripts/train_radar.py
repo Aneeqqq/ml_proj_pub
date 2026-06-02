@@ -113,21 +113,28 @@ def main() -> None:
     print(f"\nbest val auc_mean: {best_auc:.4f}  ->  {best_path}")
 
     if not args.smoke:
-        ckpt = torch.load(best_path, map_location=device)
-        model.load_state_dict(ckpt["model"])
-        v_logits, v_labels, _ = predict(model, loaders["val"], device, "radar")
-        thr = tune_thresholds(v_logits, v_labels)
-        test05 = evaluate(model, loaders["test"], criterion, device, "radar")
-        testT = evaluate(model, loaders["test"], criterion, device, "radar", thresholds=thr)
-        print(f"TEST @0.5   | f1_mean {test05['f1_mean']:.4f} | f1@t+5 {test05['f1_t5']:.4f} | "
-              f"auc_mean {test05['auc_mean']:.4f}")
-        print(f"TEST @tuned | f1_mean {testT['f1_mean']:.4f} | f1@t+5 {testT['f1_t5']:.4f} | "
-              f"auc_mean {testT['auc_mean']:.4f}")
-        print("tuned thresholds:", testT["thresholds"])
-        print("per-horizon F1 (tuned):", testT["f1_per_horizon"])
-        torch.save({**ckpt, "thresholds": thr.tolist()}, best_path)
-        (ROOT / "outputs" / "radar_test.json").write_text(
-            json.dumps({"test_0.5": test05, "test_tuned": testT}, indent=2))
+        import traceback
+        try:
+            print("=== TEST EVAL (tuning thresholds on val) ===", flush=True)
+            ckpt = torch.load(best_path, map_location=device)
+            model.load_state_dict(ckpt["model"])
+            v_logits, v_labels, _ = predict(model, loaders["val"], device, "radar")
+            thr = tune_thresholds(v_logits, v_labels)
+            test05 = evaluate(model, loaders["test"], criterion, device, "radar")
+            testT = evaluate(model, loaders["test"], criterion, device, "radar", thresholds=thr)
+            print(f"TEST @0.5   | f1_mean {test05['f1_mean']:.4f} | f1@t+5 {test05['f1_t5']:.4f} | "
+                  f"auc_mean {test05['auc_mean']:.4f}", flush=True)
+            print(f"TEST @tuned | f1_mean {testT['f1_mean']:.4f} | f1@t+5 {testT['f1_t5']:.4f} | "
+                  f"auc_mean {testT['auc_mean']:.4f}", flush=True)
+            print("tuned thresholds:", testT["thresholds"])
+            print("per-horizon F1 (tuned):", testT["f1_per_horizon"])
+            torch.save({**ckpt, "thresholds": thr.tolist()}, best_path)
+            (ROOT / "outputs" / "radar_test.json").write_text(
+                json.dumps({"test_0.5": test05, "test_tuned": testT}, indent=2))
+            print("wrote outputs/radar_test.json", flush=True)
+        except Exception:
+            print("!!! TEST EVAL FAILED — traceback below !!!", flush=True)
+            traceback.print_exc()
 
 
 if __name__ == "__main__":

@@ -107,13 +107,17 @@ def radar_raw_to_features(raw: np.ndarray, stats=None, normalize: bool = True) -
     if stats is not None:                                   # global (train-set) normalization
         mean, std = stats
         mean = np.asarray(mean, dtype=np.float32).reshape(-1, 1, 1)
-        std = np.asarray(std, dtype=np.float32).reshape(-1, 1, 1) + 1e-6
-        feats = (feats - mean) / std
+        std = np.asarray(std, dtype=np.float32).reshape(-1, 1, 1)
+        feats = (feats - mean) / np.maximum(std, 1e-6)
     elif normalize:                                         # legacy per-sample instance norm
         m = feats.mean(axis=(1, 2), keepdims=True)
-        s = feats.std(axis=(1, 2), keepdims=True) + 1e-6
-        feats = (feats - m) / s
-    return feats
+        s = feats.std(axis=(1, 2), keepdims=True)
+        feats = (feats - m) / np.maximum(s, 1e-6)
+    # CRITICAL: near-constant channels have tiny std -> normalization can explode to ~1e5, which
+    # overflows fp16 under AMP -> inf grads -> GradScaler skips every step -> training stalls
+    # (radar train_loss frozen ~1.407). Clip to an fp16-safe range; also kill any non-finite values.
+    feats = np.nan_to_num(np.clip(feats, -10.0, 10.0), nan=0.0, posinf=10.0, neginf=-10.0)
+    return feats.astype(np.float32)
 
 
 def channel_stats(raw: np.ndarray) -> tuple[np.ndarray, np.ndarray, int]:

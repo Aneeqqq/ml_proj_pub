@@ -119,6 +119,15 @@ Grep the timeline: `grep "^## \[" log.md | tail -5`.
 - ⚠️ ENV: 8 DataLoader workers (GPU config) on this 4-core CPU spawned ~17 orphan python procs (one
   6 GB) that exhausted the 16 GB RAM → OOM/timeouts. Killed via `Get-Process python | Stop-Process`.
 
+## [2026-06-02] result+fix | 2nd GPU run: camera improved, radar still flat (AMP overflow)
+- Camera (dense loader) history: val AUC up to 0.990, val F1_mean 0.4–0.49 (was ~0.25), F1@t+5 up to
+  0.58 → dense anchoring worked. Radar history: train_loss frozen ~1.407, val AUC random (0.10–0.89).
+- Diagnosed radar: train-set norm of tiny-std magnitude channels → values ~1e5 → **fp16/AMP overflow
+  → inf grads → GradScaler skips every step**. Fix: clip normalized radar feats to ±10 + nan_to_num.
+- Also test JSONs didn't write (camera stale / radar+fusion missing) — `--smoke` skipped that block.
+  Wrapped test eval in try/except + flushed prints so the next run surfaces results/errors. → [[lessons-learned]]
+- Pushed fixes; user to re-run train_radar (+ train_camera for clean test json) + fuse_eval on GPU.
+
 ## [2026-06-01] build | Vault scaffolded
 - Created schema [[CLAUDE]], [[index]], this log, [[00_overview]], concept pages, [[replication-plan]].
 - Vault is the project's permanent memory; structured per the LLM-Wiki / Memex pattern.
