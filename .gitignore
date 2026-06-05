@@ -32,3 +32,6 @@ Thumbs.db
 
 # Copyrighted paper PDF — do not redistribute
 *.pdf
+
+# Rendered paper figures (copyrighted source) — local viewing only
+figs/

@@ -25,3 +25,4 @@ Pillow
 pyyaml
 tqdm
 scikit-learn
+matplotlib

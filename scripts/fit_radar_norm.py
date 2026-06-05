@@ -30,13 +30,14 @@ def main() -> None:
     csv = ROOT / dcfg["paths"]["csv"]
     data_root = ROOT / dcfg["paths"]["data_root"]
     df = pd.read_csv(csv)
+    lcol = dcfg["label"]["column"]
     res = stratified_sequence_split(df, dcfg["split"]["ratios"], dcfg["split"]["seed"],
-                                    positive=dcfg["label"]["positive"])
+                                    label_col=lcol, positive=dcfg["label"]["positive"])
     train_rows = df[df["seq_index"].isin(res.seqs["train"])]
 
     # sample frames (include all positives so blocked magnitude is represented)
-    pos = train_rows[train_rows["label"] == dcfg["label"]["positive"]]
-    neg = train_rows[train_rows["label"] != dcfg["label"]["positive"]]
+    pos = train_rows[train_rows[lcol] == dcfg["label"]["positive"]]
+    neg = train_rows[train_rows[lcol] != dcfg["label"]["positive"]]
     rng = np.random.default_rng(dcfg["split"]["seed"])
     n_neg = max(0, n_samples - len(pos))
     neg_s = neg.sample(min(n_neg, len(neg)), random_state=dcfg["split"]["seed"])

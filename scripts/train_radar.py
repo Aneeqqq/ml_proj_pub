@@ -59,13 +59,15 @@ def main() -> None:
               f"(run: python -m scripts.fit_radar_norm)")
 
     df = pd.read_csv(csv)
+    lcol = dcfg["label"]["column"]
     res = stratified_sequence_split(df, dcfg["split"]["ratios"], dcfg["split"]["seed"],
-                                    positive=dcfg["label"]["positive"])
+                                    label_col=lcol, positive=dcfg["label"]["positive"])
     loaders = make_loaders(
         csv, data_root, res.seqs, W=W, K=K, step_s=step_s, tol_s=tol_s,
         modalities=("radar",),                          # radar-only: skip camera loading
         batch_size=tcfg["batch_size"], num_workers=tcfg["num_workers"],
         radar_noise_sigma=tcfg["radar_noise_sigma"], radar_norm=radar_norm,
+        label_col=lcol, positive=dcfg["label"]["positive"],
     )
     for s in ("train", "val", "test"):
         print(f"  {s}: {len(loaders[s].dataset)} windows")

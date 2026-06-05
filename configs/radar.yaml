@@ -16,7 +16,7 @@ train:
   weight_decay: 1.0e-4
   alpha: 1.1               # pos_weight = alpha * N0/N1
   num_workers: 8           # GPU: raise to 4-8 (radar I/O is heavy, workers help a lot)
-  amp: true               # mixed precision; auto-disabled when not on CUDA
+  amp: false              # mixed precision OFF -> plain fp32 (no fp16 overflow risk); slower on GPU
   early_stop_patience: 7
   seed: 42
   radar_noise_sigma: 0.01  # train-time Gaussian noise on raw cube (paper §III-A1)

@@ -27,6 +27,7 @@ def main() -> None:
         df,
         ratios=cfg["split"]["ratios"],
         seed=cfg["split"]["seed"],
+        label_col=cfg["label"]["column"],
         positive=cfg["label"]["positive"],
     )
 

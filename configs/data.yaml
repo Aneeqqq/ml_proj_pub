@@ -2,8 +2,10 @@
 # See ML_Proj_Vault/dataset/sequences-and-batching.md and problem-formulation.md.
 
 paths:
-  # CSV with the `label` column (blocked/not_blocked). Relative to ML_Proj_Claude/.
-  csv: scenario31_new/scenario31/scenario31_dev_labelled.csv
+  # Pipeline CSV — has the power-derived `label_derived` column. Produced by scripts.derive_label.
+  csv: scenario31_new/scenario31/scenario31_dev_derived.csv
+  # Source CSV (hand-label) that derive_label reads from.
+  csv_handlabel: scenario31_new/scenario31/scenario31_dev_labelled.csv
   # Root that the CSV's "./unit1/..." paths are relative to.
   data_root: scenario31_new/scenario31
 
@@ -33,5 +35,12 @@ radar:
   n_features: 8       # 8 stacked feature maps -> (8, 256, 64)
 
 label:
+  column: label_derived   # which column the pipeline trains on (label_derived | label)
   positive: blocked
   negative: not_blocked
+  # power-derived label params (LOS-envelope fade). See src/data/derive_label.py.
+  env_win: 41             # rolling window for the LOS envelope (~4 s)
+  env_q: 0.90             # envelope = rolling 90th percentile of max_pwr
+  thr_db: -3.0            # blocked if power this many dB below envelope ...
+  min_dur: 3              # ... for >= this many consecutive frames (~0.3 s)
+  deep_db: -4.5           # OR a deep fade this low, counted regardless of duration

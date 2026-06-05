@@ -32,6 +32,7 @@ class CameraBlockageModel(nn.Module):
         self.feat_dim = backbone.fc.in_features  # 512
         backbone.fc = nn.Identity()              # drop the classification layer
         self.backbone = backbone
+        self.freeze_backbone = freeze_backbone
         if freeze_backbone:
             for p in self.backbone.parameters():
                 p.requires_grad = False
@@ -43,6 +44,13 @@ class CameraBlockageModel(nn.Module):
             nn.Dropout(dropout),
             nn.Linear(fc_hidden, horizon),
         )
+
+    def train(self, mode: bool = True):
+        """Keep a frozen backbone in eval mode so its BatchNorm running stats don't drift."""
+        super().train(mode)
+        if self.freeze_backbone:
+            self.backbone.eval()
+        return self
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """x: (B, W, 3, H, H) -> logits (B, horizon)."""

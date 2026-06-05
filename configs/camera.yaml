@@ -7,7 +7,8 @@ model:
   fc_hidden: 128
   dropout: 0.4
   pretrained: true        # ResNet-18 ImageNet weights (downloaded on first run)
-  freeze_backbone: false
+  freeze_backbone: true   # CHANGE 2026-06-02: freeze ImageNet backbone (train LSTM+head only).
+                          #   Reduces overfitting on scarce positives; backbone BN also kept in eval.
 
 train:
   epochs: 30
@@ -17,6 +18,6 @@ train:
   weight_decay: 1.0e-4
   alpha: 1.1              # scales pos_weight (paper §III-A2: w_pos = alpha * N0/N1)
   num_workers: 8          # GPU: raise to 4-8 (CPU box keeps 0)
-  amp: true              # mixed precision; auto-disabled when not on CUDA
+  amp: false             # mixed precision OFF -> plain fp32 (no fp16 overflow risk); slower on GPU
   early_stop_patience: 7  # epochs without val f1_mean improvement
   seed: 42

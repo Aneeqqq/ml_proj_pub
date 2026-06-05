@@ -63,6 +63,13 @@ Visual stream carries dense spatiotemporal context — approaching vehicles, occ
 trajectories — directly observable before the LOS actually breaks. Radar adds cheap motion/depth on
 top → [[radar]]; LiDAR/GPS add redundancy/noise.
 
+## 🔧 CHANGE 2026-06-02 — backbone FROZEN
+`configs/camera.yaml: freeze_backbone: true`. The ImageNet ResNet-18 is now **frozen** (only LSTM +
+FC head train → ~346K trainable params, down from ~11.5M). Done correctly: weights `requires_grad=
+False` **and** `CameraBlockageModel.train()` keeps the backbone in `eval()` so its BatchNorm running
+stats don't drift. Rationale: reduce overfitting on the scarce positives. Re-run on GPU to compare
+vs the fine-tuned run (camera val AUC 0.99 / F1 ~0.45). Revert by setting `freeze_backbone: false`.
+
 ## ✅ Implementation (`src/models/camera.py`, `scripts/train_camera.py`)
 - `CameraBlockageModel`: ResNet-18 (ImageNet, `fc`→Identity) shared over 5 frames → `(B,5,512)` →
   `LSTM(512→128, 1 layer)` → last hidden → `FC(128→128)→ReLU→Dropout(0.4)→FC(128→5)` logits.

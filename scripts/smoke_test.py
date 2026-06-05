@@ -33,8 +33,9 @@ def main() -> None:
     df = pd.read_csv(csv)
     df["_t"] = parse_time_seconds(df["time_stamp"])
 
+    lcol = cfg["label"]["column"]
     res = stratified_sequence_split(df, cfg["split"]["ratios"], cfg["split"]["seed"],
-                                    positive=cfg["label"]["positive"])
+                                    label_col=lcol, positive=cfg["label"]["positive"])
     print("=== split stats ===")
     print(res.stats.to_string(index=False))
 
@@ -56,7 +57,8 @@ def main() -> None:
 
     # build the training dataset and pull one batch
     loaders = make_loaders(csv, data_root, res.seqs, W=W, K=K, step_s=step_s, tol_s=tol_s,
-                           modalities=("camera", "radar"), batch_size=4, num_workers=0)
+                           modalities=("camera", "radar"), batch_size=4, num_workers=0,
+                           label_col=lcol, positive=cfg["label"]["positive"])
     for split, dl in loaders.items():
         print(f"  {split}: {len(dl.dataset)} windows, {len(dl)} batches")
 

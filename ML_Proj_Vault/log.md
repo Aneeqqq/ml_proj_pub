@@ -128,6 +128,23 @@ Grep the timeline: `grep "^## \[" log.md | tail -5`.
   Wrapped test eval in try/except + flushed prints so the next run surfaces results/errors. → [[lessons-learned]]
 - Pushed fixes; user to re-run train_radar (+ train_camera for clean test json) + fuse_eval on GPU.
 
+## [2026-06-02] change | Freeze camera ResNet-18 backbone
+- During code verification: confirmed camera inputs (B,5,3,256,256), 300ms timestamp-spaced (every
+  ~3rd native frame, not consecutive), ImageNet normalization, Fig.2-faithful architecture.
+- User change: `freeze_backbone: true`. Implemented correctly — `requires_grad=False` + overrode
+  `model.train()` to keep backbone in eval (BN stats frozen). Trainable params 11.5M → 346K (LSTM+head).
+- Verified: 0 trainable backbone params, param_groups=1, backbone.training=False under .train(). → [[camera]]
+
+## [2026-06-05] investigate+build | Power-derived blockage label (replaces hand-label)
+- Thorough label verification: hand-label correlates with nothing (AUC≤0.65), is manual/subjective
+  (DataLabel2 GUI), invisible in camera, doesn't track power. Relative-drop model fails.
+- LOS-envelope model works: blocked = max_pwr ≥3 dB below per-seq rolling-q90 envelope for ≥3 frames
+  (+ deep −4.5 dB override). Verified positives are genuine −4..−6 dB fades.
+- Implemented `src/data/derive_label.py` + `scripts/derive_label.py` → `scenario31_dev_derived.csv`
+  (`label_derived`). Threaded `label.column` config through splits/dataset/all scripts.
+- Result: 6.3% pos / 32 seqs (vs hand 2.9% / 15 seqs); val/test now 5 pos seqs each; pos_weight ~14.
+  derive→make_splits→smoke_test all pass. Hand label kept for comparison. → [[blockage-label]]
+
 ## [2026-06-01] build | Vault scaffolded
 - Created schema [[CLAUDE]], [[index]], this log, [[00_overview]], concept pages, [[replication-plan]].
 - Vault is the project's permanent memory; structured per the LLM-Wiki / Memex pattern.
