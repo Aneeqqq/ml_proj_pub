@@ -35,3 +35,6 @@ Thumbs.db
 
 # Rendered paper figures (copyrighted source) — local viewing only
 figs/
+
+# error scratch dumps
+err.txt

@@ -17,7 +17,8 @@ train:
   head_lr: 1.0e-3         # higher LR for LSTM + head
   weight_decay: 1.0e-4
   alpha: 1.1              # scales pos_weight (paper §III-A2: w_pos = alpha * N0/N1)
-  num_workers: 8          # GPU: raise to 4-8 (CPU box keeps 0)
+  num_workers: 2          # Windows+CUDA: keep LOW (each worker reloads torch/CUDA ~1GB).
+                          #   8 exhausted the paging file on 16GB. 2 is safe; 0 if still OOM.
   amp: false             # mixed precision OFF -> plain fp32 (no fp16 overflow risk); slower on GPU
   early_stop_patience: 7  # epochs without val f1_mean improvement
   seed: 42
