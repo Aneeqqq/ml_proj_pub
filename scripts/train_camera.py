@@ -95,8 +95,8 @@ def main() -> None:
                                   "camera", max_batches, scaler=scaler, use_amp=use_amp)
         val = evaluate(model, loaders["val"], criterion, device, "camera", max_batches)
         print(f"epoch {ep:02d} | train_loss {tr_loss:.4f} | val_loss {val['loss']:.4f} | "
-              f"val_auc_mean {val['auc_mean']:.4f} | val_f1_mean {val['f1_mean']:.4f} | "
-              f"val_f1@t+5 {val['f1_t5']:.4f}")
+              f"val_auc(t+1) {val['auc_per_horizon'][0]:.4f} | val_f1(t+1) {val['f1_per_horizon'][0]:.4f}",
+              flush=True)
         history.append({"epoch": ep, "train_loss": tr_loss, **val})
         if val["auc_mean"] > best_auc:                  # select/early-stop on AUC (calibration-free)
             best_auc = val["auc_mean"]
@@ -121,10 +121,10 @@ def main() -> None:
             thr = tune_thresholds(v_logits, v_labels)
             test05 = evaluate(model, loaders["test"], criterion, device, "camera")
             testT = evaluate(model, loaders["test"], criterion, device, "camera", thresholds=thr)
-            print(f"TEST @0.5   | f1_mean {test05['f1_mean']:.4f} | f1@t+5 {test05['f1_t5']:.4f} | "
-                  f"auc_mean {test05['auc_mean']:.4f}", flush=True)
-            print(f"TEST @tuned | f1_mean {testT['f1_mean']:.4f} | f1@t+5 {testT['f1_t5']:.4f} | "
-                  f"auc_mean {testT['auc_mean']:.4f}", flush=True)
+            print(f"TEST @0.5   | f1(t+1) {test05['f1_per_horizon'][0]:.4f} | "
+                  f"auc(t+1) {test05['auc_per_horizon'][0]:.4f}", flush=True)
+            print(f"TEST @tuned | f1(t+1) {testT['f1_per_horizon'][0]:.4f} | "
+                  f"auc(t+1) {testT['auc_per_horizon'][0]:.4f}", flush=True)
             print("tuned thresholds:", testT["thresholds"])
             print("per-horizon F1 (tuned):", testT["f1_per_horizon"])
             torch.save({**ckpt, "thresholds": thr.tolist()}, best_path)   # for fusion reuse

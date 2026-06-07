@@ -16,7 +16,7 @@ scenarios:
 
 window:
   W: 5
-  K: 5
+  K: 1            # predict ONLY t+1 (0.3 s ahead). Model horizon must match (configs/*.yaml).
   step_ms: 300
   tol_ms: 130
 

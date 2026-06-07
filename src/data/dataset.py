@@ -227,7 +227,7 @@ def make_loaders(
         loaders[split] = DataLoader(
             ds, batch_size=batch_size, shuffle=(split == "train"),
             num_workers=num_workers, pin_memory=pin,
-            persistent_workers=(num_workers > 0),
+            persistent_workers=False,   # workers die at end of each pass -> don't accumulate at eval
             prefetch_factor=(2 if num_workers > 0 else None),
         )
     return loaders
