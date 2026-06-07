@@ -34,6 +34,7 @@ Content catalog for the blockage-prediction replication. Read [[00_overview]] fi
 - ★ [[blockage-label]] — ✅ RESOLVED: `label`∈{blocked,not_blocked} in the labelled CSV (2.85% pos).
 - [[abnormalities]] — every ⚠️ inconsistency/risk, ranked.
 - [[legacy-code-audit]] — bugs in the prior dataloader + the sequence-correct rewrite (`src/data/`).
+- [[multi-scenario]] — ★ scenarios 31-34 combined; cross-scenario split (test=unseen 31).
 
 ## Concepts
 - [[blockage-prediction]] · [[late-fusion]] · [[lstm-temporal]] · [[class-imbalance]]

@@ -17,7 +17,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from src.data.splits import stratified_sequence_split
+from src.data.splits import split_from_config
 from src.data.dataset import (BlockageWindowDataset, build_windows, compute_pos_weight,
                               make_loaders, parse_time_seconds)
 
@@ -33,10 +33,9 @@ def main() -> None:
     df = pd.read_csv(csv)
     df["_t"] = parse_time_seconds(df["time_stamp"])
 
-    lcol = cfg["label"]["column"]
-    res = stratified_sequence_split(df, cfg["split"]["ratios"], cfg["split"]["seed"],
-                                    label_col=lcol, positive=cfg["label"]["positive"])
-    print("=== split stats ===")
+    lcol = cfg["label"]["column"]; seqc = cfg.get("seq_col", "seq_index")
+    res = split_from_config(df, cfg)
+    print(f"=== split stats (protocol: {cfg['split'].get('protocol','pooled')}) ===")
     print(res.stats.to_string(index=False))
 
     # (2) disjoint splits
@@ -46,19 +45,19 @@ def main() -> None:
 
     # (1) no window crosses a sequence boundary + (timestamp guard) each step within tolerance
     for split, seqs in res.seqs.items():
-        wins = build_windows(df, seqs, W, K, step_s, tol_s)
+        wins = build_windows(df, seqs, W, K, step_s, tol_s, seq_col=seqc)
         for w in wins[:2000]:
             rows = list(w["win"]) + list(w["hor"])
-            assert df.loc[rows, "seq_index"].nunique() == 1, "LEAK: window crosses sequences"
+            assert df.loc[rows, seqc].nunique() == 1, "LEAK: window crosses sequences"
             times = df.loc[list(w["win"]), "_t"].to_numpy()
             # each frame is within tol of its 300ms grid point -> consecutive diff <= step + 2*tol
             assert (np.diff(times) <= step_s + 2 * tol_s + 1e-6).all(), "window spans a time gap"
-    print("[OK] no window crosses a seq_index boundary; input steps within time tolerance")
+    print("[OK] no window crosses a sequence boundary; input steps within time tolerance")
 
     # build the training dataset and pull one batch
     loaders = make_loaders(csv, data_root, res.seqs, W=W, K=K, step_s=step_s, tol_s=tol_s,
                            modalities=("camera", "radar"), batch_size=4, num_workers=0,
-                           label_col=lcol, positive=cfg["label"]["positive"])
+                           label_col=lcol, positive=cfg["label"]["positive"], seq_col=seqc)
     for split, dl in loaders.items():
         print(f"  {split}: {len(dl.dataset)} windows, {len(dl)} batches")
 

@@ -18,7 +18,7 @@ import torch
 import yaml
 from torch import nn
 
-from src.data.splits import stratified_sequence_split
+from src.data.splits import split_from_config
 from src.data.dataset import make_loaders, compute_pos_weight
 from src.models.radar import RadarBlockageModel
 from src.train.engine import train_one_epoch, evaluate, predict
@@ -59,15 +59,15 @@ def main() -> None:
               f"(run: python -m scripts.fit_radar_norm)")
 
     df = pd.read_csv(csv)
-    lcol = dcfg["label"]["column"]
-    res = stratified_sequence_split(df, dcfg["split"]["ratios"], dcfg["split"]["seed"],
-                                    label_col=lcol, positive=dcfg["label"]["positive"])
+    lcol = dcfg["label"]["column"]; seqc = dcfg.get("seq_col", "seq_index")
+    res = split_from_config(df, dcfg)
+    print(res.stats.to_string(index=False))
     loaders = make_loaders(
         csv, data_root, res.seqs, W=W, K=K, step_s=step_s, tol_s=tol_s,
         modalities=("radar",),                          # radar-only: skip camera loading
         batch_size=tcfg["batch_size"], num_workers=tcfg["num_workers"],
         radar_noise_sigma=tcfg["radar_noise_sigma"], radar_norm=radar_norm,
-        label_col=lcol, positive=dcfg["label"]["positive"],
+        label_col=lcol, positive=dcfg["label"]["positive"], seq_col=seqc,
     )
     for s in ("train", "val", "test"):
         print(f"  {s}: {len(loaders[s].dataset)} windows")

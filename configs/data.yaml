@@ -1,46 +1,51 @@
-# Data pipeline config for the blockage-prediction replication (Scenario 31 only).
-# See ML_Proj_Vault/dataset/sequences-and-batching.md and problem-formulation.md.
+# Data pipeline config — MULTI-SCENARIO (DeepSense 31-34), cross-scenario protocol.
+# See ML_Proj_Vault/dataset/{sequences-and-batching,blockage-label,multi-scenario}.md
 
 paths:
-  # Pipeline CSV — has the power-derived `label_derived` column. Produced by scripts.derive_label.
-  csv: scenario31_new/scenario31/scenario31_dev_derived.csv
-  # Source CSV (hand-label) that derive_label reads from.
-  csv_handlabel: scenario31_new/scenario31/scenario31_dev_labelled.csv
-  # Root that the CSV's "./unit1/..." paths are relative to.
-  data_root: scenario31_new/scenario31
+  # Combined dataset built by scripts.build_dataset (scenario, seq_uid, full paths, label_derived).
+  csv: data/dataset_all.csv
+  # All paths in the combined CSV are relative to ML_Proj_Claude/, so data_root is the project root.
+  data_root: .
+
+# Source scenarios: each CSV's "./unit1/..." paths are relative to its own `root`.
+scenarios:
+  - {name: "31", csv: scenario31_new/scenario31/scenario31_dev_labelled.csv, root: scenario31_new/scenario31}
+  - {name: "32", csv: scenario32/scenario32_dev.csv,                          root: scenario32}
+  - {name: "33", csv: scenario33/scenario33_dev.csv,                          root: scenario33}
+  - {name: "34", csv: scenario34_new/scenario34/scenario34.csv,               root: scenario34_new/scenario34}
 
 window:
-  W: 5            # input frames per window (paper: latest 5 observations)
-  K: 5            # prediction horizon t+1..t+5 (paper: up to 1.5s ahead)
-  # v2: dense, timestamp-based anchoring (see plan/improvement-plan.md). Every native frame is a
-  # window-end; the W inputs and K labels are the frames closest to anchor ± j*step_ms, accepted
-  # only if within tol_ms (else the window is dropped -> never spans a time gap / scene seam).
-  step_ms: 300   # target spacing between observations (paper t=300ms)
-  tol_ms: 130    # max |actual - target| time error to accept a frame (native dt ~92ms median)
+  W: 5
+  K: 5
+  step_ms: 300
+  tol_ms: 130
 
 split:
-  # Sequence-level, STRATIFIED on blockage presence. Whole seq_index -> one split.
-  ratios: {train: 0.70, val: 0.15, test: 0.15}
+  protocol: cross_scenario   # cross_scenario | pooled
+  test_scenarios: ["31"]     # held-out unseen scenario(s) -> test
+  val_frac: 0.18             # fraction of train/val SEQUENCES (from 32/33/34) used for val
+  ratios: {train: 0.70, val: 0.15, test: 0.15}   # only used if protocol == pooled
   seed: 42
+
+seq_col: seq_uid             # scenario-qualified sequence id (e.g. "32:5")
 
 camera:
   image_size: 256
-  # ImageNet stats (ResNet-18 backbone is ImageNet-pretrained).
   norm_mean: [0.485, 0.456, 0.406]
   norm_std:  [0.229, 0.224, 0.225]
 
 radar:
-  range_bins: 256     # native dim-1
-  doppler_out: 64     # paper target Doppler width (trim/pad from native 250)
-  n_features: 8       # 8 stacked feature maps -> (8, 256, 64)
+  range_bins: 256
+  doppler_out: 64
+  n_features: 8
 
 label:
-  column: label_derived   # which column the pipeline trains on (label_derived | label)
+  column: label_derived
   positive: blocked
   negative: not_blocked
-  # power-derived label params (LOS-envelope fade). See src/data/derive_label.py.
-  env_win: 41             # rolling window for the LOS envelope (~4 s)
-  env_q: 0.90             # envelope = rolling 90th percentile of max_pwr
-  thr_db: -3.0            # blocked if power this many dB below envelope ...
-  min_dur: 3              # ... for >= this many consecutive frames (~0.3 s)
-  deep_db: -4.5           # OR a deep fade this low, counted regardless of duration
+  # power-derived label params (LOS-envelope fade) — applied per sequence, per scenario.
+  env_win: 41
+  env_q: 0.90
+  thr_db: -3.0
+  min_dur: 3
+  deep_db: -4.5

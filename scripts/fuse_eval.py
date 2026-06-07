@@ -19,7 +19,7 @@ import pandas as pd
 import torch
 import yaml
 
-from src.data.splits import stratified_sequence_split
+from src.data.splits import split_from_config
 from src.data.dataset import make_loaders
 from src.models.camera import CameraBlockageModel
 from src.models.radar import RadarBlockageModel
@@ -56,14 +56,13 @@ def main() -> None:
         z = np.load(norm_path); radar_norm = (z["mean"], z["std"])
 
     df = pd.read_csv(csv)
-    lcol = dcfg["label"]["column"]
-    res = stratified_sequence_split(df, dcfg["split"]["ratios"], dcfg["split"]["seed"],
-                                    label_col=lcol, positive=dcfg["label"]["positive"])
+    lcol = dcfg["label"]["column"]; seqc = dcfg.get("seq_col", "seq_index")
+    res = split_from_config(df, dcfg)
     # ONE combined loader so camera & radar windows are aligned
     loaders = make_loaders(csv, data_root, res.seqs, W=W, K=K, step_s=step_s, tol_s=tol_s,
                            modalities=("camera", "radar"), batch_size=8, num_workers=0,
                            image_size=dcfg["camera"]["image_size"], radar_norm=radar_norm,
-                           label_col=lcol, positive=dcfg["label"]["positive"])
+                           label_col=lcol, positive=dcfg["label"]["positive"], seq_col=seqc)
 
     cam = CameraBlockageModel(horizon=ccfg["horizon"], lstm_hidden=ccfg["lstm_hidden"],
                               fc_hidden=ccfg["fc_hidden"], dropout=ccfg["dropout"],

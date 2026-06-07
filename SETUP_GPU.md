@@ -39,8 +39,8 @@ Edit `configs/camera.yaml` / `configs/radar.yaml` → `train:`
 
 ## 5. Generate splits + run
 ```powershell
-.venv\Scripts\python.exe -m scripts.derive_label     # power-derived label -> scenario31_dev_derived.csv
-.venv\Scripts\python.exe -m scripts.make_splits      # writes splits/seq_assignment.csv
+.venv\Scripts\python.exe -m scripts.build_dataset    # derive labels + combine scen 31-34 -> data/dataset_all.csv
+.venv\Scripts\python.exe -m scripts.make_splits      # cross-scenario split (train/val=32/33/34, test=31)
 .venv\Scripts\python.exe -m scripts.smoke_test       # sanity asserts (no leakage, time guard, shapes)
 .venv\Scripts\python.exe -m scripts.fit_radar_norm   # REQUIRED before radar -> outputs/radar_norm.npz
 .venv\Scripts\python.exe -m scripts.train_camera     # camera -> outputs/camera_*.pt

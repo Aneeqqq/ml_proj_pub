@@ -119,3 +119,73 @@ def stratified_sequence_split(
     stats = pd.DataFrame(rows)
 
     return SplitResult(assignment=assignment, seqs=seqs, stats=stats)
+
+
+def _stats(df, seqs, seq_col, label_col, positive):
+    per = (df.assign(_pos=(df[label_col] == positive).astype(int))
+           .groupby(seq_col).agg(n=("_pos", "size"), n_pos=("_pos", "sum")).reset_index())
+    per["has_block"] = per["n_pos"] > 0
+    rows = []
+    for split, ss in seqs.items():
+        sub = per[per[seq_col].isin(ss)]
+        rows.append(dict(split=split, n_seqs=len(ss), n_pos_seqs=int(sub["has_block"].sum()),
+                         n_samples=int(sub["n"].sum()), n_pos_samples=int(sub["n_pos"].sum()),
+                         pos_rate=round(sub["n_pos"].sum() / max(sub["n"].sum(), 1), 4)))
+    return pd.DataFrame(rows)
+
+
+def cross_scenario_split(
+    df: pd.DataFrame,
+    test_scenarios: list[str],
+    val_frac: float = 0.18,
+    seed: int = 42,
+    label_col: str = "label_derived",
+    positive: str = "blocked",
+    seq_col: str = "seq_uid",
+    scen_col: str = "scenario",
+) -> SplitResult:
+    """Held-out-scenario protocol: TEST = all sequences of `test_scenarios`; the remaining
+    scenarios' sequences are split into train/val (stratified on blockage presence, by val_frac).
+    """
+    test_scn = {str(s) for s in test_scenarios}
+    df = df.copy()
+    df[scen_col] = df[scen_col].astype(str)
+
+    test_seqs = df.loc[df[scen_col].isin(test_scn), seq_col].unique().tolist()
+    tv = df[~df[scen_col].isin(test_scn)]
+
+    per = (tv.assign(_pos=(tv[label_col] == positive).astype(int))
+           .groupby(seq_col).agg(n_pos=("_pos", "sum")).reset_index())
+    pos_seqs = per.loc[per.n_pos > 0, seq_col].tolist()
+    neg_seqs = per.loc[per.n_pos == 0, seq_col].tolist()
+    rng_p = pd.Series(pos_seqs).sample(frac=1.0, random_state=seed).tolist()
+    rng_n = pd.Series(neg_seqs).sample(frac=1.0, random_state=seed + 1).tolist()
+
+    def take_val(lst):
+        k = round(len(lst) * val_frac)
+        return lst[:k], lst[k:]          # val, train
+
+    vp, tp = take_val(rng_p)
+    vn, tn = take_val(rng_n)
+    seqs = {"train": tp + tn, "val": vp + vn, "test": [str(s) for s in test_seqs]}
+
+    assignment = {}
+    for split, ss in seqs.items():
+        for s in ss:
+            assignment[s] = split
+    all_assigned = [s for v in seqs.values() for s in v]
+    assert len(all_assigned) == len(set(all_assigned)), "a sequence landed in >1 split"
+
+    stats = _stats(df, seqs, seq_col, label_col, positive)
+    return SplitResult(assignment=assignment, seqs=seqs, stats=stats)
+
+
+def split_from_config(df: pd.DataFrame, cfg: dict) -> SplitResult:
+    """Dispatch to the configured split protocol (cross_scenario | pooled)."""
+    sp, lc = cfg["split"], cfg["label"]
+    seqc = cfg.get("seq_col", "seq_index")
+    if sp.get("protocol") == "cross_scenario":
+        return cross_scenario_split(df, sp["test_scenarios"], sp.get("val_frac", 0.18), sp["seed"],
+                                    label_col=lc["column"], positive=lc["positive"], seq_col=seqc)
+    return stratified_sequence_split(df, sp["ratios"], sp["seed"], label_col=lc["column"],
+                                     positive=lc["positive"], seq_col=seqc)

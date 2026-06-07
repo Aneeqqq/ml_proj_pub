@@ -49,14 +49,15 @@ def main() -> None:
         z = np.load(norm_path); radar_norm = (z["mean"], z["std"])
 
     lcol = d.get("label", {}).get("column", "label")
+    seqc = d.get("seq_col", "seq_index")
     # pick a sequence that contains blockage
-    per = df.assign(p=(df[lcol] == "blocked").astype(int)).groupby("seq_index").p.sum()
+    per = df.assign(p=(df[lcol] == "blocked").astype(int)).groupby(seqc).p.sum()
     blocked_seqs = per[per > 0].index.tolist()
     seq = blocked_seqs[len(blocked_seqs) // 2]
 
     ds = BlockageWindowDataset(df, data_root, keep_seqs=[seq], W=W, K=K, step_s=step_s, tol_s=tol_s,
                                modalities=("camera", "radar"), augment=False, radar_norm=radar_norm,
-                               label_col=lcol, positive=d["label"]["positive"])
+                               label_col=lcol, positive=d["label"]["positive"], seq_col=seqc)
     # pick the window to show
     if args.case == "during":
         # prefer a window where the anchor (last input frame) is blocked; else any input-frame blocked

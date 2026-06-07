@@ -145,6 +145,17 @@ Grep the timeline: `grep "^## \[" log.md | tail -5`.
 - Result: 6.3% pos / 32 seqs (vs hand 2.9% / 15 seqs); val/test now 5 pos seqs each; pos_weight ~14.
   derive→make_splits→smoke_test all pass. Hand label kept for comparison. → [[blockage-label]]
 
+## [2026-06-07] build | Multi-scenario (31-34) cross-scenario pipeline
+- Added scenarios 32 (3235/15), 33 (3981/18), 34 (4439/31) — same schema as 31. Total 18,667/116.
+  Derived label generalizes (4.9-9.3% blocked, files present, ~92ms). → [[multi-scenario]]
+- `scripts/build_dataset.py`: derive label per scenario + combine → `data/dataset_all.csv` with
+  `scenario`, `seq_uid` (collision-safe), and ML_Proj_Claude-relative paths. Config reworked to a
+  `scenarios:` list + `seq_col: seq_uid` + `split.protocol: cross_scenario`.
+- `splits.py`: `cross_scenario_split` (test=31, stratified train/val on 32/33/34) + `split_from_config`
+  dispatcher. Threaded `seq_col` through dataset/build_windows/all scripts.
+- DECISION (user): **cross-scenario** protocol (train 32/33/34, test unseen 31). Verified:
+  train 8368 / val 1683 / test 5640 windows; smoke_test passes. → [[multi-scenario]]
+
 ## [2026-06-01] build | Vault scaffolded
 - Created schema [[CLAUDE]], [[index]], this log, [[00_overview]], concept pages, [[replication-plan]].
 - Vault is the project's permanent memory; structured per the LLM-Wiki / Memex pattern.

@@ -101,7 +101,7 @@ def build_windows(
                     break
                 hor.append(rows[k])
             if ok:
-                windows.append({"seq": int(seq), "win": win, "hor": hor, "anchor": int(g.at[rows[i], index_col])})
+                windows.append({"seq": seq, "win": win, "hor": hor, "anchor": int(g.at[rows[i], index_col])})
     return windows
 
 
@@ -124,6 +124,7 @@ class BlockageWindowDataset(Dataset):
         radar_norm: tuple[np.ndarray, np.ndarray] | None = None,
         label_col: str = "label",
         positive: str = "blocked",
+        seq_col: str = "seq_index",
     ):
         df = df.copy()
         if "_t" not in df.columns:
@@ -138,7 +139,7 @@ class BlockageWindowDataset(Dataset):
         self._rng = np.random.default_rng(0)
 
         self.y = (df[label_col] == positive).astype(np.float32)
-        self.windows = build_windows(df, keep_seqs, W, K, step_s, tol_s)
+        self.windows = build_windows(df, keep_seqs, W, K, step_s, tol_s, seq_col=seq_col)
 
         tfm = [transforms.Resize((image_size, image_size))]
         if augment:

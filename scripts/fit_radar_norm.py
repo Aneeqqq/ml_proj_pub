@@ -15,7 +15,7 @@ import numpy as np
 import pandas as pd
 import yaml
 
-from src.data.splits import stratified_sequence_split
+from src.data.splits import split_from_config
 from src.data.radar_features import channel_stats
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -30,10 +30,9 @@ def main() -> None:
     csv = ROOT / dcfg["paths"]["csv"]
     data_root = ROOT / dcfg["paths"]["data_root"]
     df = pd.read_csv(csv)
-    lcol = dcfg["label"]["column"]
-    res = stratified_sequence_split(df, dcfg["split"]["ratios"], dcfg["split"]["seed"],
-                                    label_col=lcol, positive=dcfg["label"]["positive"])
-    train_rows = df[df["seq_index"].isin(res.seqs["train"])]
+    lcol = dcfg["label"]["column"]; seqc = dcfg.get("seq_col", "seq_index")
+    res = split_from_config(df, dcfg)
+    train_rows = df[df[seqc].isin(res.seqs["train"])]
 
     # sample frames (include all positives so blocked magnitude is represented)
     pos = train_rows[train_rows[lcol] == dcfg["label"]["positive"]]
