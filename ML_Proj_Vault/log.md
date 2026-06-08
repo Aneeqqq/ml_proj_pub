@@ -168,6 +168,18 @@ Grep the timeline: `grep "^## \[" log.md | tail -5`.
 - TODO: (1) run POOLED protocol (sanity + paper-comparable); (2) debug radar flat train_loss;
   (3) consider unfreezing camera. Results committed on GPU box (push pending interactive creds). → [[multi-scenario]]
 
+## [2026-06-09] state | Experiments + tracking; SSH-driven GPU runs
+- Diagnosis done (see [[cross-scenario-investigation]]): cross-scenario fails (domain shift: 31/32 day,
+  33/34 night, diff intersections); radar has no signal for the 60GHz-fade label; radar model healthy.
+- Pooled (within-dist) confirms: camera test AUC 0.68, radar 0.50, fused 0.68 (α=1.1, frozen).
+- Infra added: per-run output folders `outputs/<run_name>/`; experiment tracking (TensorBoard +
+  `outputs/experiments.jsonl` registry, `scripts/experiments.py` table); AMP re-enabled + persistent
+  train workers (speed); SSH access to GPU box (key `~/.ssh/gpu_ml`, host computer house@192.168.18.86).
+- Driving GPU over SSH from this PC: `git checkout -- outputs & git pull --rebase && python -m scripts.X`.
+  GPU can't `git push` (no interactive creds) — read results via SSH / capture from logs.
+- ⏸ PENDING (resume tomorrow): run `pooled_a037_unfrozen` (unfrozen backbone, α=0.367) to see if
+  fine-tuning lifts camera above the 0.68 frozen baseline. Box idle, repo at ec9c7c2.
+
 ## [2026-06-01] build | Vault scaffolded
 - Created schema [[CLAUDE]], [[index]], this log, [[00_overview]], concept pages, [[replication-plan]].
 - Vault is the project's permanent memory; structured per the LLM-Wiki / Memex pattern.
