@@ -21,7 +21,7 @@ window:
   tol_ms: 130
 
 split:
-  protocol: cross_scenario   # cross_scenario | pooled
+  protocol: pooled           # cross_scenario | pooled  (pooled = paper-style, each scene seen in train)
   test_scenarios: ["31"]     # held-out unseen scenario(s) -> test
   val_frac: 0.18             # fraction of train/val SEQUENCES (from 32/33/34) used for val
   ratios: {train: 0.70, val: 0.15, test: 0.15}   # only used if protocol == pooled
