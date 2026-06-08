@@ -90,17 +90,17 @@ def stratified_sequence_split(
     alloc_pos = _allocate(rng, ratios)
     alloc_neg = _allocate(rng_neg, ratios)
 
-    assignment: dict[int, str] = {}
-    seqs: dict[str, list[int]] = {"train": [], "val": [], "test": []}
+    assignment: dict = {}
+    seqs: dict[str, list] = {"train": [], "val": [], "test": []}
     for split in seqs:
         for s in alloc_pos[split] + alloc_neg[split]:
-            assignment[int(s)] = split
-            seqs[split].append(int(s))
+            assignment[s] = split            # seq id may be str (seq_uid) or int (seq_index)
+            seqs[split].append(s)
 
     # ---- sanity: disjoint & complete ----
     all_assigned = [s for v in seqs.values() for s in v]
     assert len(all_assigned) == len(set(all_assigned)), "a sequence landed in >1 split"
-    assert set(all_assigned) == set(int(s) for s in per_seq[seq_col]), "missing sequences"
+    assert set(all_assigned) == set(per_seq[seq_col]), "missing sequences"
 
     # ---- per-split stats ----
     rows = []
