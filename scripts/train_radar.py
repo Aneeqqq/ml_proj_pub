@@ -23,6 +23,7 @@ from src.data.dataset import make_loaders, compute_pos_weight
 from src.models.radar import RadarBlockageModel
 from src.train.engine import train_one_epoch, evaluate, predict
 from src.train.metrics import tune_thresholds
+from src.train.tracking import get_writer, log_scalars, close_writer, append_run
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -69,6 +70,7 @@ def main() -> None:
         batch_size=tcfg["batch_size"], num_workers=tcfg["num_workers"],
         radar_noise_sigma=tcfg["radar_noise_sigma"], radar_norm=radar_norm,
         label_col=lcol, positive=dcfg["label"]["positive"], seq_col=seqc,
+        persistent_workers=tcfg.get("persistent_workers", False),
     )
     for s in ("train", "val", "test"):
         print(f"  {s}: {len(loaders[s].dataset)} windows")
@@ -93,6 +95,7 @@ def main() -> None:
     epochs = args.epochs or (1 if args.smoke else tcfg["epochs"])
     max_batches = 4 if args.smoke else None
     best_auc, best_path, history, patience = -1.0, outdir / "radar_best.pt", [], 0
+    writer = get_writer(outdir)
 
     for ep in range(1, epochs + 1):
         tr_loss = train_one_epoch(model, loaders["train"], optimizer, criterion, device,
@@ -101,6 +104,8 @@ def main() -> None:
         print(f"epoch {ep:02d} | train_loss {tr_loss:.4f} | val_loss {val['loss']:.4f} | "
               f"val_auc(t+1) {val['auc_per_horizon'][0]:.4f} | val_f1(t+1) {val['f1_per_horizon'][0]:.4f}",
               flush=True)
+        log_scalars(writer, ep, train_loss=tr_loss, val_loss=val["loss"],
+                    val_auc=val["auc_per_horizon"][0], val_f1=val["f1_per_horizon"][0])
         history.append({"epoch": ep, "train_loss": tr_loss, **val})
         if val["auc_mean"] > best_auc:
             best_auc = val["auc_mean"]
@@ -135,9 +140,19 @@ def main() -> None:
             (outdir / "radar_test.json").write_text(
                 json.dumps({"test_0.5": test05, "test_tuned": testT}, indent=2))
             print("wrote outputs/radar_test.json", flush=True)
+            append_run({
+                "run_name": dcfg.get("run_name", "run"), "modality": "radar",
+                "protocol": dcfg["split"].get("protocol"), "alpha": tcfg["alpha"],
+                "freeze_backbone": None, "batch_size": tcfg["batch_size"],
+                "K": K, "epochs_ran": ep, "best_val_auc": round(best_auc, 4),
+                "test_auc": round(testT["auc_per_horizon"][0], 4),
+                "test_f1_tuned": round(testT["f1_per_horizon"][0], 4),
+                "test_f1_0p5": round(test05["f1_per_horizon"][0], 4),
+            })
         except Exception:
             print("!!! TEST EVAL FAILED — traceback below !!!", flush=True)
             traceback.print_exc()
+    close_writer(writer)
 
 
 if __name__ == "__main__":

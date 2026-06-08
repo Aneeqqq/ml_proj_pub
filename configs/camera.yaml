@@ -16,8 +16,9 @@ train:
   head_lr: 1.0e-3         # higher LR for LSTM + head
   weight_decay: 1.0e-4
   alpha: 0.367            # 1/3 of original 1.1 (pos_weight ~5)
-  num_workers: 8          # persistent_workers OFF so max 8 alive at once (~8GB). Drop to 4/2/0 if
+  num_workers: 4          # train workers persist (below); val/test spawn transiently
+  persistent_workers: true  # keep TRAIN workers alive across epochs (no per-epoch torch re-import)
                           #   "paging file too small" recurs.
-  amp: false             # mixed precision OFF -> plain fp32 (no fp16 overflow risk); slower on GPU
+  amp: true               # AMP back ON (radar clip-safe now) -> ~2x faster on GPU
   early_stop_patience: 7  # epochs without val f1_mean improvement
   seed: 42

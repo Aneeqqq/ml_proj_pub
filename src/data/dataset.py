@@ -208,9 +208,15 @@ def make_loaders(
     image_size: int = 256,
     radar_noise_sigma: float = 0.01,
     radar_norm: tuple[np.ndarray, np.ndarray] | None = None,
+    persistent_workers: bool = False,
     **kw,
 ) -> dict[str, DataLoader]:
-    """Build train/val/test DataLoaders from a sequence-level split assignment."""
+    """Build train/val/test DataLoaders from a sequence-level split assignment.
+
+    `persistent_workers` (config-driven) keeps the TRAIN workers alive across epochs (big speedup on
+    Windows where spawning re-imports torch each epoch). Val/test loaders never persist, so workers
+    don't accumulate at eval time (which previously exhausted the paging file).
+    """
     df = pd.read_csv(csv)
     df["_t"] = parse_time_seconds(df["time_stamp"])
     pin = torch.cuda.is_available()
@@ -224,10 +230,11 @@ def make_loaders(
             radar_norm=radar_norm,
             **kw,
         )
+        persist = persistent_workers and split == "train" and num_workers > 0
         loaders[split] = DataLoader(
             ds, batch_size=batch_size, shuffle=(split == "train"),
             num_workers=num_workers, pin_memory=pin,
-            persistent_workers=False,   # workers die at end of each pass -> don't accumulate at eval
+            persistent_workers=persist,
             prefetch_factor=(2 if num_workers > 0 else None),
         )
     return loaders
