@@ -31,7 +31,7 @@ seq_col: seq_uid             # scenario-qualified sequence id (e.g. "32:5")
 
 # Each run's models/results go to outputs/<run_name>/ so experiments don't overwrite each other.
 # Change this per experiment (e.g. pooled_a022_frozen, pooled_a11_unfrozen, ...).
-run_name: pooled_a022_frozen
+run_name: pooled_a022_unfrozen
 
 camera:
   image_size: 256

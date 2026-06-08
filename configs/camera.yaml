@@ -7,8 +7,7 @@ model:
   fc_hidden: 128
   dropout: 0.4
   pretrained: true        # ResNet-18 ImageNet weights (downloaded on first run)
-  freeze_backbone: true   # CHANGE 2026-06-02: freeze ImageNet backbone (train LSTM+head only).
-                          #   Reduces overfitting on scarce positives; backbone BN also kept in eval.
+  freeze_backbone: false  # UNFROZEN: fine-tune the whole ResNet-18 (vs frozen baseline AUC 0.68).
 
 train:
   epochs: 30
