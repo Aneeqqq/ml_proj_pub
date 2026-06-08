@@ -35,6 +35,7 @@ Content catalog for the blockage-prediction replication. Read [[00_overview]] fi
 - [[abnormalities]] — every ⚠️ inconsistency/risk, ranked.
 - [[legacy-code-audit]] — bugs in the prior dataloader + the sequence-correct rewrite (`src/data/`).
 - [[multi-scenario]] — ★ scenarios 31-34 combined; cross-scenario split (test=unseen 31).
+- [[cross-scenario-investigation]] — ★ why cross-scenario fails (domain shift + radar no-signal).
 
 ## Concepts
 - [[blockage-prediction]] · [[late-fusion]] · [[lstm-temporal]] · [[class-imbalance]]
