@@ -35,6 +35,7 @@ def main() -> None:
 
     dcfg = yaml.safe_load((ROOT / "configs" / "data.yaml").read_text())
     rcfg = yaml.safe_load((ROOT / "configs" / "radar.yaml").read_text())
+    outdir = ROOT / "outputs" / dcfg.get("run_name", "run"); outdir.mkdir(parents=True, exist_ok=True)
     mcfg, tcfg = rcfg["model"], rcfg["train"]
     if args.smoke:                              # CPU-safe quick check regardless of GPU config
         tcfg["num_workers"], tcfg["batch_size"] = 0, 2
@@ -91,7 +92,7 @@ def main() -> None:
 
     epochs = args.epochs or (1 if args.smoke else tcfg["epochs"])
     max_batches = 4 if args.smoke else None
-    best_auc, best_path, history, patience = -1.0, ROOT / "outputs" / "radar_best.pt", [], 0
+    best_auc, best_path, history, patience = -1.0, outdir / "radar_best.pt", [], 0
 
     for ep in range(1, epochs + 1):
         tr_loss = train_one_epoch(model, loaders["train"], optimizer, criterion, device,
@@ -111,7 +112,7 @@ def main() -> None:
                 print(f"early stop at epoch {ep} (no val AUC improvement for {patience})")
                 break
 
-    (ROOT / "outputs" / "radar_history.json").write_text(json.dumps(history, indent=2))
+    (outdir / "radar_history.json").write_text(json.dumps(history, indent=2))
     print(f"\nbest val auc_mean: {best_auc:.4f}  ->  {best_path}")
 
     if not args.smoke:
@@ -131,7 +132,7 @@ def main() -> None:
             print("tuned thresholds:", testT["thresholds"])
             print("per-horizon F1 (tuned):", testT["f1_per_horizon"])
             torch.save({**ckpt, "thresholds": thr.tolist()}, best_path)
-            (ROOT / "outputs" / "radar_test.json").write_text(
+            (outdir / "radar_test.json").write_text(
                 json.dumps({"test_0.5": test05, "test_tuned": testT}, indent=2))
             print("wrote outputs/radar_test.json", flush=True)
         except Exception:

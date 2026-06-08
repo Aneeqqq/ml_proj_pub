@@ -40,6 +40,7 @@ def main() -> None:
     dcfg = yaml.safe_load((ROOT / "configs" / "data.yaml").read_text())
     ccfg = yaml.safe_load((ROOT / "configs" / "camera.yaml").read_text())["model"]
     rcfg = yaml.safe_load((ROOT / "configs" / "radar.yaml").read_text())["model"]
+    outdir = ROOT / "outputs" / dcfg.get("run_name", "run"); outdir.mkdir(parents=True, exist_ok=True)
     device = "cuda" if torch.cuda.is_available() else "cpu"
     print(f"device: {device}")
 
@@ -70,8 +71,8 @@ def main() -> None:
     rad = RadarBlockageModel(in_channels=rcfg["in_channels"], horizon=rcfg["horizon"],
                              lstm_hidden=rcfg["lstm_hidden"], fc_hidden=rcfg["fc_hidden"],
                              dropout=rcfg["dropout"], conv_channels=tuple(rcfg["conv_channels"])).to(device)
-    cam.load_state_dict(torch.load(ROOT / "outputs" / "camera_best.pt", map_location=device)["model"])
-    rad.load_state_dict(torch.load(ROOT / "outputs" / "radar_best.pt", map_location=device)["model"])
+    cam.load_state_dict(torch.load(outdir / "camera_best.pt", map_location=device)["model"])
+    rad.load_state_dict(torch.load(outdir / "radar_best.pt", map_location=device)["model"])
     models = {"camera": cam, "radar": rad}
 
     # --- validation: per-modality F1 -> fusion weights ---
@@ -109,7 +110,7 @@ def main() -> None:
     out = {"weights": {k: np.asarray(v).tolist() for k, v in weights.items()},
            "thresholds": thr.tolist(),
            "camera": cam_metrics, "radar": rad_metrics, "fused": fused_metrics}
-    (ROOT / "outputs" / "fusion_test.json").write_text(json.dumps(out, indent=2))
+    (outdir / "fusion_test.json").write_text(json.dumps(out, indent=2))
     print(f"\nwrote {ROOT / 'outputs' / 'fusion_test.json'}")
 
 
