@@ -156,6 +156,18 @@ Grep the timeline: `grep "^## \[" log.md | tail -5`.
 - DECISION (user): **cross-scenario** protocol (train 32/33/34, test unseen 31). Verified:
   train 8368 / val 1683 / test 5640 windows; smoke_test passes. → [[multi-scenario]]
 
+## [2026-06-08] result | First cross-scenario run (t+1) — generalization FAILS
+- Setup: derived label, frozen camera backbone, K=1 (t+1), train/val=32/33/34, test=unseen 31.
+- Camera: val AUC 0.68 (on 32/33/34 val) but **TEST AUC 0.46 on unseen scn31 — below random**, F1 0.08.
+  → camera learned scene-specific geometry; does NOT transfer to a new location (inverts on 31).
+- Radar: **train_loss frozen ~1.354**, val_f1 constant 0.147 → not learning at all (separate bug,
+  not AMP). Test AUC 0.54.
+- Fused: AUC 0.455 (no help).
+- KEY: cross-scenario generalization fails. NOTE: the paper likely **pooled** 31-34 (within-distribution),
+  not held-out — so pooled protocol is the fair replication; cross-scenario is a harder honesty test.
+- TODO: (1) run POOLED protocol (sanity + paper-comparable); (2) debug radar flat train_loss;
+  (3) consider unfreezing camera. Results committed on GPU box (push pending interactive creds). → [[multi-scenario]]
+
 ## [2026-06-01] build | Vault scaffolded
 - Created schema [[CLAUDE]], [[index]], this log, [[00_overview]], concept pages, [[replication-plan]].
 - Vault is the project's permanent memory; structured per the LLM-Wiki / Memex pattern.
