@@ -1,4 +1,4 @@
-# Data pipeline config — MULTI-SCENARIO (DeepSense 31-34), cross-scenario protocol.
+# Data pipeline config - MULTI-SCENARIO (DeepSense 31-34).
 # See ML_Proj_Vault/dataset/{sequences-and-batching,blockage-label,multi-scenario}.md
 
 paths:
@@ -22,7 +22,7 @@ window:
 
 split:
   protocol: pooled           # cross_scenario | pooled  (pooled = paper-style, each scene seen in train)
-  test_scenarios: ["31"]     # held-out unseen scenario(s) -> test
+  test_scenarios: ["31"]     # held-out unseen scenario(s) -> test (cross_scenario only)
   val_frac: 0.18             # fraction of train/val SEQUENCES (from 32/33/34) used for val
   ratios: {train: 0.70, val: 0.15, test: 0.15}   # only used if protocol == pooled
   seed: 42
@@ -30,8 +30,8 @@ split:
 seq_col: seq_uid             # scenario-qualified sequence id (e.g. "32:5")
 
 # Each run's models/results go to outputs/<run_name>/ so experiments don't overwrite each other.
-# Change this per experiment (e.g. pooled_a022_frozen, pooled_a11_unfrozen, ...).
-run_name: pooled_a037_unfrozen
+# Override per experiment via `python -m scripts.train_camera --run-name <name>`.
+run_name: pooled_v2_resnet
 
 camera:
   image_size: 256
@@ -47,7 +47,7 @@ label:
   column: label_derived
   positive: blocked
   negative: not_blocked
-  # power-derived label params (LOS-envelope fade) — applied per sequence, per scenario.
+  # power-derived label params (LOS-envelope fade) - applied per sequence, per scenario.
   env_win: 41
   env_q: 0.90
   thr_db: -3.0

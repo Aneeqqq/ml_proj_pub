@@ -147,6 +147,9 @@ class BlockageWindowDataset(Dataset):
                 transforms.RandomHorizontalFlip(0.5),
                 transforms.RandomRotation(5),
                 transforms.GaussianBlur(3, sigma=(0.1, 1.5)),
+                # day/night robustness: scenarios 31/32 are daytime, 33/34 night (see
+                # cross-scenario-investigation.md). Cheap stand-in for MIRNet enhancement.
+                transforms.ColorJitter(brightness=0.4, contrast=0.3),
             ]
         tfm += [transforms.ToTensor(), transforms.Normalize(norm_mean, norm_std)]
         self.cam_tfm = transforms.Compose(tfm)
@@ -209,6 +212,7 @@ def make_loaders(
     radar_noise_sigma: float = 0.01,
     radar_norm: tuple[np.ndarray, np.ndarray] | None = None,
     persistent_workers: bool = False,
+    balanced_sampler: bool = False,
     **kw,
 ) -> dict[str, DataLoader]:
     """Build train/val/test DataLoaders from a sequence-level split assignment.
@@ -231,8 +235,18 @@ def make_loaders(
             **kw,
         )
         persist = persistent_workers and split == "train" and num_workers > 0
+        sampler = None
+        if balanced_sampler and split == "train":
+            # equalize pos/neg windows per batch (window positive if any horizon step blocked);
+            # replaces extreme pos_weight in the loss, which wrecked probability calibration.
+            wy = np.array([float(any(ds.y[r] for r in w["hor"])) for w in ds.windows])
+            class_w = {0.0: 1.0 / max((wy == 0).sum(), 1), 1.0: 1.0 / max((wy == 1).sum(), 1)}
+            weights = torch.tensor([class_w[v] for v in wy], dtype=torch.double)
+            sampler = torch.utils.data.WeightedRandomSampler(weights, num_samples=len(ds),
+                                                             replacement=True)
         loaders[split] = DataLoader(
-            ds, batch_size=batch_size, shuffle=(split == "train"),
+            ds, batch_size=batch_size, shuffle=(sampler is None and split == "train"),
+            sampler=sampler,
             num_workers=num_workers, pin_memory=pin,
             persistent_workers=persist,
             prefetch_factor=(2 if num_workers > 0 else None),

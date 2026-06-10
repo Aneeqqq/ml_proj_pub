@@ -1,24 +1,27 @@
-# Camera model + training config. Hyperparams not stated in the paper are sane defaults
-# (flagged in ML_Proj_Vault/plan/open-questions.md). See modalities/camera.md.
+# Camera model + training config. See ML_Proj_Vault/plan/strategy-reassessment.md for the v2
+# rationale (balanced sampler, brightness aug, cosine LR, video-model option).
 
 model:
+  arch: resnet18_lstm     # resnet18_lstm (paper-faithful) | r2plus1d_18 (Kinetics video model, ★)
   horizon: 1              # t+1 only (must match data.yaml window.K)
-  lstm_hidden: 128
-  fc_hidden: 128
+  lstm_hidden: 128        # (resnet18_lstm only)
+  fc_hidden: 128          # (resnet18_lstm only)
   dropout: 0.4
-  pretrained: true        # ResNet-18 ImageNet weights (downloaded on first run)
-  freeze_backbone: false  # UNFROZEN: fine-tune the whole ResNet-18 (vs frozen baseline AUC 0.68).
+  pretrained: true        # ImageNet (resnet) / Kinetics-400 (r2plus1d) weights
+  freeze_backbone: false  # fine-tune the whole backbone (frozen baseline was AUC 0.68)
+  image_size: 112         # used by r2plus1d_18 only (its native input); resnet uses data.yaml 256
 
 train:
   epochs: 30
-  batch_size: 32           # GPU: raise to 32-64
+  batch_size: 32
   backbone_lr: 1.0e-4     # lower LR for pretrained backbone
-  head_lr: 1.0e-3         # higher LR for LSTM + head
+  head_lr: 1.0e-3         # higher LR for the new head (cosine-annealed to 1% over `epochs`)
   weight_decay: 1.0e-4
-  alpha: 0.367            # 1/3 of original 1.1 (pos_weight ~5)
+  balanced_sampler: true  # WeightedRandomSampler -> ~50/50 batches; pos_weight forced to 1.
+                          #   Replaces the huge pos_weight (5-37x) that wrecked F1 calibration.
+  alpha: 0.367            # only used if balanced_sampler is false
   num_workers: 4          # train workers persist (below); val/test spawn transiently
   persistent_workers: true  # keep TRAIN workers alive across epochs (no per-epoch torch re-import)
-                          #   "paging file too small" recurs.
-  amp: true               # AMP back ON (radar clip-safe now) -> ~2x faster on GPU
-  early_stop_patience: 7  # epochs without val f1_mean improvement
+  amp: true               # mixed precision (~2x faster on GPU)
+  early_stop_patience: 10 # was 7 - several runs stopped on val noise while still improving
   seed: 42
