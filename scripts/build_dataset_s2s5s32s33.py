@@ -20,44 +20,48 @@ import json
 ROOT = Path(__file__).resolve().parents[1]
 
 
-def std_time(ts: str) -> str:
-    """Standardize timestamp format to HH:MM:SS-us."""
-    if ts.startswith("["):  # Scenario 2/5 format: ['HH-MM-SS-ms']
-        h, m, s, ms = ts.strip("[]'").split("-")
-        return f"{h}:{m}:{s}-{int(ms) * 1000}"
-    else:  # Scenario 32/33 format: HH:MM:SS-us
-        return ts
+def std_time_s25(ts: str) -> str:
+    """"['02-11-07-142']" (HH-MM-SS-milliseconds) -> "02:11:07-142000" (pipeline format)."""
+    h, m, s, ms = ts.strip("[]'").split("-")
+    return f"{h}:{m}:{s}-{int(ms) * 1000}"
 
 
 def process_scenario_2_5():
-    """Process scenarios 2 and 5 (native labels from labels_unit1.csv)."""
+    """Process scenarios 2 and 5 (native labels).
+
+    labels_unit1.csv has the real `label` but its seq_index/time_stamp are garbage
+    (row-ordered by power-file string number). Join `label` onto the MAIN scenario CSV
+    (proper seq_index + time_stamp[UTC]) by unique camera image filename.
+    """
     dfs = []
     for scn in [2, 5]:
-        csv_path = ROOT / f"Scenario{scn}" / "labels_unit1.csv"
+        main_path = ROOT / f"Scenario{scn}" / f"scenario{scn}.csv"
+        lab_path = ROOT / f"Scenario{scn}" / "labels_unit1.csv"
 
-        if not csv_path.exists():
-            print(f"  WARNING: {csv_path} not found, skipping")
+        if not main_path.exists() or not lab_path.exists():
+            print(f"  WARNING: scenario {scn} CSVs not found, skipping")
             continue
 
-        df = pd.read_csv(csv_path)
+        main_df = pd.read_csv(main_path)
+        lab = pd.read_csv(lab_path)
+        main_df["img"] = main_df["unit1_rgb"].str.split("/").str[-1]
+        lab["img"] = lab["unit1_rgb"].str.split("/").str[-1]
+        m = main_df.merge(lab[["img", "label"]], on="img", how="left", validate="one_to_one")
+        assert m["label"].notna().all(), f"Scenario{scn}: unmatched labels after image-name join"
 
-        # Ensure unit1_rgb column exists
-        if "unit1_rgb" not in df.columns:
-            if "image_name" in df.columns:
-                df["unit1_rgb"] = "./unit1/camera_data/" + df["image_name"]
-            else:
-                df["unit1_rgb"] = "./unit1/camera_data/image_" + df["index"].astype(str) + ".jpg"
-
-        df["scenario"] = scn
-        # time_stamp is already in format (numeric or HH:MM:SS-us), keep as-is
-        df["seq_uid"] = df["seq_index"].astype(str)
-
-        # Use native label as-is
-        if "label" not in df.columns and "blocked" in df.columns:
-            df["label"] = df["blocked"].map({1: "blocked", 0: "not_blocked"})
-
-        print(f"  Scenario {scn}: {len(df)} rows, {df['seq_index'].nunique()} sequences")
-        dfs.append(df[["index", "unit1_rgb", "time_stamp", "seq_index", "scenario", "seq_uid", "label"]])
+        out = pd.DataFrame({
+            "index": m["index"],
+            "unit1_rgb": f"./Scenario{scn}/" + m["unit1_rgb"].str.replace(r"^\./", "", regex=True),
+            "time_stamp": m["time_stamp[UTC]"].map(std_time_s25),
+            "seq_index": m["seq_index"],
+            "scenario": scn,
+            "seq_uid": f"{scn}:" + m["seq_index"].astype(str),
+            "label": m["label"],
+        })
+        blocked = (out["label"] == "blocked").sum()
+        print(f"  Scenario {scn}: {len(out)} rows, {out['seq_uid'].nunique()} sequences, "
+              f"{blocked} blocked ({100*blocked/len(out):.1f}%)")
+        dfs.append(out)
 
     return pd.concat(dfs, ignore_index=True) if dfs else pd.DataFrame()
 
@@ -91,8 +95,10 @@ def process_scenario_32():
     df["label"] = df.reset_index(drop=True).index.map(lambda i: get_label(i))
 
     df["scenario"] = 32
-    df["time_stamp"] = df["time_stamp"].apply(std_time)
-    df["seq_uid"] = df["seq_index"].astype(str)
+    # time_stamp already in HH:MM:SS-microseconds format; keep as-is
+    df["seq_uid"] = "32:" + df["seq_index"].astype(str)
+    # Add scenario prefix to paths
+    df["unit1_rgb"] = "./scenario32/" + df["unit1_rgb"].str.replace(r"^\./", "", regex=True)
 
     blocked = (df["label"] == "blocked").sum()
     print(f"  Scenario 32: {len(df)} rows, {df['seq_index'].nunique()} sequences, {blocked} blocked ({100*blocked/len(df):.1f}%)")
@@ -128,8 +134,10 @@ def process_scenario_33():
     df["label"] = df.reset_index(drop=True).index.map(lambda i: get_label(i))
 
     df["scenario"] = 33
-    df["time_stamp"] = df["time_stamp"].apply(std_time)
-    df["seq_uid"] = df["seq_index"].astype(str)
+    # time_stamp already in HH:MM:SS-microseconds format; keep as-is
+    df["seq_uid"] = "33:" + df["seq_index"].astype(str)
+    # Add scenario prefix to paths
+    df["unit1_rgb"] = "./scenario33/" + df["unit1_rgb"].str.replace(r"^\./", "", regex=True)
 
     blocked = (df["label"] == "blocked").sum()
     print(f"  Scenario 33: {len(df)} rows, {df['seq_index'].nunique()} sequences, {blocked} blocked ({100*blocked/len(df):.1f}%)")
