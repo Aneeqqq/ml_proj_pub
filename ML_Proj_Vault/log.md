@@ -226,3 +226,15 @@ Not just timestamps - actually opened the images:
   the road advance across the BS->tracked-car LOS. The native `blocked` label tracks a VISIBLE passing
   vehicle. This is why s2s5 hits 0.968 while 31-34 (~0.7) couldn't: derived label there fired on power
   fades with no visible cause; here the occluder is plainly in frame.
+
+## [2026-06-11] result | s2s5_r2p1d threshold-tuned eval (operating-point F1)
+Ran scripts/eval_tuned on the ep9 checkpoint (val 699 windows, 26 pos, ~2 events). AUC 0.968.
+- @0.5:   F1 0.143 | precision 1.000 | recall 0.077  (TP 2, FP 0, FN 24) -> model almost never
+  crosses 0.5 because the balanced sampler trains low absolute probs for the rare class. The "poor"
+  F1 was pure threshold miscalibration, not lack of skill.
+- @tuned 0.085: F1 0.556 | precision 0.435 | recall 0.769  (TP 20, FP 26, FN 6) -> catches 20/26
+  blocked windows. ~4x F1 with no model change.
+- Caveats: 26 FPs mostly border the real events (early firing - OK-ish for *proactive* prediction);
+  threshold tuned in-sample on ~2 events -> optimistic. AUC 0.968 stays the trustworthy headline.
+- Fix for a real F1: pool more native-label scenarios (event count) or k-fold over scenes. New tool:
+  scripts/eval_tuned.py (operating-point F1 + confusion matrix for train/val-only runs).
