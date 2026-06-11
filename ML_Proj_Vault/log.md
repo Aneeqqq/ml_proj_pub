@@ -214,3 +214,15 @@ Rechecked scene loading via timestamps (the make-or-break concern). 63 scenes, 4
   worst per-frame deviation from the 0.3s grid 0.120s < tol 0.13. The 37 "jumps" = benign single-drop jitter.
 - Timestamp cross-checks the filename time (image_BS1_396_02_11_07 <-> ['02-11-07-0']).
 Conclusion: s2s5_r2p1d val AUC 0.968 is on scene-coherent, correctly-windowed data.
+
+## [2026-06-11] verify (visual) | loaded s2s5 anomaly frames and eyeballed them
+Not just timestamps - actually opened the images:
+- **Dropped-frame gap** (scene 2:21, 1.33s, frames 9731->9732 consecutive numbers): SAME continuous
+  scene, pedestrian+white SUV only nudged forward. A recording PAUSE, not a scene cut. Windows
+  correctly refuse to span it.
+- **Scene boundary** (2:1 end 02:11:21 -> 2:2 start 02:12:18, ~57s apart): identical fixed-camera
+  background (stationary BS), separate sessions. Confirms seq_index = recording session for the testbed.
+- **Blockage** (scene 2:30, clear 02:38:38 -> blocked 02:38:39, ~0.9s): two cars driving left along
+  the road advance across the BS->tracked-car LOS. The native `blocked` label tracks a VISIBLE passing
+  vehicle. This is why s2s5 hits 0.968 while 31-34 (~0.7) couldn't: derived label there fired on power
+  fades with no visible cause; here the occluder is plainly in frame.
