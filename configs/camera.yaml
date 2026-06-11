@@ -6,9 +6,10 @@ model:
   horizon: 1              # t+1 only (must match data.yaml window.K)
   lstm_hidden: 128        # (resnet18_lstm only)
   fc_hidden: 128          # (resnet18_lstm only)
-  dropout: 0.4
+  dropout: 0.5            # bumped 0.4 -> 0.5: r2p1d memorized the train set in ~6 epochs
   pretrained: true        # ImageNet (resnet) / Kinetics-400 (r2plus1d) weights
   freeze_backbone: false  # fine-tune the whole backbone (frozen baseline was AUC 0.68)
+  freeze_stages: 3        # r2plus1d only: freeze stem+layer1+layer2; fine-tune layer3/4 + head
   image_size: 112         # used by r2plus1d_18 only (its native input); resnet uses data.yaml 256
 
 train:
@@ -16,7 +17,7 @@ train:
   batch_size: 32
   backbone_lr: 1.0e-4     # lower LR for pretrained backbone
   head_lr: 1.0e-3         # higher LR for the new head (cosine-annealed to 1% over `epochs`)
-  weight_decay: 1.0e-4
+  weight_decay: 5.0e-4    # bumped 1e-4 -> 5e-4 against r2p1d overfitting
   balanced_sampler: true  # WeightedRandomSampler -> ~50/50 batches; pos_weight forced to 1.
                           #   Replaces the huge pos_weight (5-37x) that wrecked F1 calibration.
   alpha: 0.367            # only used if balanced_sampler is false

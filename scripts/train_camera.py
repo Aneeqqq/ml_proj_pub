@@ -34,6 +34,8 @@ def main() -> None:
     ap.add_argument("--epochs", type=int, default=None)
     ap.add_argument("--arch", default=None, help="override model.arch (resnet18_lstm | r2plus1d_18)")
     ap.add_argument("--run-name", default=None, help="override data.yaml run_name")
+    ap.add_argument("--eval-only", action="store_true",
+                    help="skip training; test-eval the existing outputs/<run_name>/camera_best.pt")
     args = ap.parse_args()
 
     dcfg = yaml.safe_load((ROOT / "configs" / "data.yaml").read_text())
@@ -110,32 +112,37 @@ def main() -> None:
     epochs = args.epochs or (1 if args.smoke else tcfg["epochs"])
     max_batches = 4 if args.smoke else None
     best_auc, best_path, history = -1.0, outdir / "camera_best.pt", []
-    patience = 0
-    writer = get_writer(outdir)
+    patience, ep = 0, 0
+    writer = None if args.eval_only else get_writer(outdir)
 
-    for ep in range(1, epochs + 1):
-        tr_loss = train_one_epoch(model, loaders["train"], optimizer, criterion, device,
-                                  "camera", max_batches, scaler=scaler, use_amp=use_amp)
-        val = evaluate(model, loaders["val"], criterion, device, "camera", max_batches)
-        print(f"epoch {ep:02d} | train_loss {tr_loss:.4f} | val_loss {val['loss']:.4f} | "
-              f"val_auc(t+1) {val['auc_per_horizon'][0]:.4f} | val_f1(t+1) {val['f1_per_horizon'][0]:.4f}",
-              flush=True)
-        scheduler.step()
-        log_scalars(writer, ep, train_loss=tr_loss, val_loss=val["loss"],
-                    val_auc=val["auc_per_horizon"][0], val_f1=val["f1_per_horizon"][0],
-                    lr=optimizer.param_groups[0]["lr"])
-        history.append({"epoch": ep, "train_loss": tr_loss, **val})
-        if val["auc_mean"] > best_auc:                  # select/early-stop on AUC (calibration-free)
-            best_auc = val["auc_mean"]
-            torch.save({"model": model.state_dict(), "val": val, "epoch": ep}, best_path)
-            patience = 0
-        else:
-            patience += 1
-            if patience >= tcfg["early_stop_patience"]:
-                print(f"early stop at epoch {ep} (no val AUC improvement for {patience})")
-                break
+    if args.eval_only:
+        ckpt0 = torch.load(best_path, map_location=device)
+        best_auc, ep = ckpt0.get("val", {}).get("auc_mean", -1.0), ckpt0.get("epoch", 0)
+        print(f"eval-only: scoring existing {best_path} (epoch {ep}, val auc_mean {best_auc:.4f})")
+    else:
+        for ep in range(1, epochs + 1):
+            tr_loss = train_one_epoch(model, loaders["train"], optimizer, criterion, device,
+                                      "camera", max_batches, scaler=scaler, use_amp=use_amp)
+            val = evaluate(model, loaders["val"], criterion, device, "camera", max_batches)
+            print(f"epoch {ep:02d} | train_loss {tr_loss:.4f} | val_loss {val['loss']:.4f} | "
+                  f"val_auc(t+1) {val['auc_per_horizon'][0]:.4f} | val_f1(t+1) {val['f1_per_horizon'][0]:.4f}",
+                  flush=True)
+            scheduler.step()
+            log_scalars(writer, ep, train_loss=tr_loss, val_loss=val["loss"],
+                        val_auc=val["auc_per_horizon"][0], val_f1=val["f1_per_horizon"][0],
+                        lr=optimizer.param_groups[0]["lr"])
+            history.append({"epoch": ep, "train_loss": tr_loss, **val})
+            if val["auc_mean"] > best_auc:              # select/early-stop on AUC (calibration-free)
+                best_auc = val["auc_mean"]
+                torch.save({"model": model.state_dict(), "val": val, "epoch": ep}, best_path)
+                patience = 0
+            else:
+                patience += 1
+                if patience >= tcfg["early_stop_patience"]:
+                    print(f"early stop at epoch {ep} (no val AUC improvement for {patience})")
+                    break
 
-    (outdir / "camera_history.json").write_text(json.dumps(history, indent=2))
+        (outdir / "camera_history.json").write_text(json.dumps(history, indent=2))
     print(f"\nbest val auc_mean: {best_auc:.4f}  ->  {best_path}")
 
     if not args.smoke:
@@ -188,7 +195,8 @@ def main() -> None:
                 "alpha": ("sampler" if balanced else tcfg["alpha"]),
                 "freeze_backbone": mcfg.get("freeze_backbone", False),
                 "batch_size": tcfg["batch_size"],
-                "K": K, "epochs_ran": ep, "best_val_auc": round(best_auc, 4),
+                "K": K, "epochs_ran": ep, "eval_only": args.eval_only,
+                "best_val_auc": round(best_auc, 4),
                 "test_auc": round(testT["auc_per_horizon"][0], 4),
                 "test_f1_tuned": round(testT["f1_per_horizon"][0], 4),
                 "test_f1_0p5": round(test05["f1_per_horizon"][0], 4),

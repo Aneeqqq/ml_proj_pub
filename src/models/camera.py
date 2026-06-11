@@ -84,7 +84,8 @@ class R2Plus1DBlockage(nn.Module):
     Normalization should use Kinetics stats (see KINETICS_MEAN/STD).
     """
 
-    def __init__(self, horizon: int = 1, dropout: float = 0.3, pretrained: bool = True):
+    def __init__(self, horizon: int = 1, dropout: float = 0.3, pretrained: bool = True,
+                 freeze_stages: int = 0):
         super().__init__()
         from torchvision.models.video import r2plus1d_18, R2Plus1D_18_Weights
         weights = R2Plus1D_18_Weights.KINETICS400_V1 if pretrained else None
@@ -93,14 +94,32 @@ class R2Plus1DBlockage(nn.Module):
         net.fc = nn.Identity()
         self.backbone = net
         self.head = nn.Sequential(nn.Dropout(dropout), nn.Linear(feat_dim, horizon))
+        # the unregularized model memorizes our ~12k windows in ~6 epochs; freezing the early
+        # stages (generic motion filters) leaves only layer3/4 + head to fit the small dataset
+        self._frozen = []
+        stages = [net.stem, net.layer1, net.layer2, net.layer3]
+        for m in stages[:freeze_stages]:
+            for p in m.parameters():
+                p.requires_grad = False
+            self._frozen.append(m)
+
+    def train(self, mode: bool = True):
+        """Frozen stages stay in eval so their BatchNorm running stats don't drift."""
+        super().train(mode)
+        for m in self._frozen:
+            m.eval()
+        return self
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         x = x.permute(0, 2, 1, 3, 4)             # (B,W,3,H,W) -> (B,3,T,H,W)
         return self.head(self.backbone(x))
 
     def param_groups(self, backbone_lr: float, head_lr: float):
-        return [{"params": self.head.parameters(), "lr": head_lr},
-                {"params": self.backbone.parameters(), "lr": backbone_lr}]
+        bb = [p for p in self.backbone.parameters() if p.requires_grad]
+        groups = [{"params": self.head.parameters(), "lr": head_lr}]
+        if bb:
+            groups.append({"params": bb, "lr": backbone_lr})
+        return groups
 
 
 KINETICS_MEAN = (0.43216, 0.394666, 0.37645)
@@ -113,7 +132,8 @@ def build_camera_model(mcfg: dict, smoke: bool = False) -> nn.Module:
     pretrained = mcfg.get("pretrained", True) and not smoke
     if arch == "r2plus1d_18":
         return R2Plus1DBlockage(horizon=mcfg["horizon"], dropout=mcfg.get("dropout", 0.3),
-                                pretrained=pretrained)
+                                pretrained=pretrained,
+                                freeze_stages=mcfg.get("freeze_stages", 0))
     return CameraBlockageModel(
         horizon=mcfg["horizon"], lstm_hidden=mcfg["lstm_hidden"], fc_hidden=mcfg["fc_hidden"],
         dropout=mcfg["dropout"], pretrained=pretrained,
