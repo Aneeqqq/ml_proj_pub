@@ -248,3 +248,12 @@ Conclusion: Scenario 32 labels ARE trainable (unlike initial skepticism). Power-
 Dataset: 8509 rows, 15 scenes, ~6.2% blockage (2883+extra from pooled). Labels: native (2+5) + audited power-derived (32).
 Config: 70/15/15 train/val/test, W=5 K=1, Kinetics norm, image 112, r2p1d-18 with freeze_stages=3 dropout=0.5 wd=5e-4.
 Launched on GPU box, 30 epochs, should finish ~30min. Expects: AUC 0.80+ (better than s2s5 due to larger, cleaner dataset).
+
+## [2026-06-11] result | s2s5s32_r2p1d test eval — early stop @ep12, test_auc 0.673
+Training completed via early stop (10-epoch patience, no improvement after ep2). Best val_auc 0.8777 @ep2.
+**Test results (K=1, t+1 only):** test_auc 0.673 (drop from val 0.8777 = small val set overfit). test_f1 0.117@threshold_0.375.
+**Per-scenario breakdown (test):**
+- Scenario 2: AUC 0.7557 | F1 0.0 (507 windows) — threshold miscalibration, low absolute probs from balanced sampler
+- Scenario 5: AUC NaN | F1 0.0 (60 windows) — degenerate (likely all one class)
+- Scenario 32: AUC 0.6998 | F1 0.1281 (330 windows) — best per-scenario, still poor generalization
+**Interpretation:** Domain shift across day (2/32) vs night (5?) scenarios, combined with 6% class imbalance → lower test AUC. Paper achieves 97% F1 on s2+s5 native labels only (different protocol). Lessons: freeze_stages alone insufficient for cross-domain s2s5s32; need larger train set or more aggressive regularization. [[lessons-learned]] updated.
