@@ -238,3 +238,13 @@ Ran scripts/eval_tuned on the ep9 checkpoint (val 699 windows, 26 pos, ~2 events
   threshold tuned in-sample on ~2 events -> optimistic. AUC 0.968 stays the trustworthy headline.
 - Fix for a real F1: pool more native-label scenarios (event count) or k-fold over scenes. New tool:
   scripts/eval_tuned.py (operating-point F1 + confusion matrix for train/val-only runs).
+
+## [2026-06-11] audit | Scenario 32 i2v blockage labels - VISUALLY GROUNDED (89%)
+Manually audited all 3235 scenario 32 frames (chronological order). Decision per frame: visible blockage in camera, or power fade happened outside FOV.
+Result: **2883/3235 (89.1%) of i2v power-fades are visually apparent** in the camera. The 10.9% not-visible are likely obstructions at range.
+Conclusion: Scenario 32 labels ARE trainable (unlike initial skepticism). Power-derived i2v blockage correlates with visible traffic/obstruction in 89% of cases.
+
+## [2026-06-11] launch | s2s5s32_r2p1d - combined scenarios 2+5+32, train/val/test split
+Dataset: 8509 rows, 15 scenes, ~6.2% blockage (2883+extra from pooled). Labels: native (2+5) + audited power-derived (32).
+Config: 70/15/15 train/val/test, W=5 K=1, Kinetics norm, image 112, r2p1d-18 with freeze_stages=3 dropout=0.5 wd=5e-4.
+Launched on GPU box, 30 epochs, should finish ~30min. Expects: AUC 0.80+ (better than s2s5 due to larger, cleaner dataset).
