@@ -192,3 +192,9 @@ Grep the timeline: `grep "^## \[" log.md | tail -5`.
 ## [2026-06-01] build | Vault scaffolded
 - Created schema [[CLAUDE]], [[index]], this log, [[00_overview]], concept pages, [[replication-plan]].
 - Vault is the project's permanent memory; structured per the LLM-Wiki / Memex pattern.
+
+## [2026-06-11] result | pooled_v2_r2p1d ep6 ckpt scored (--eval-only) + regularized rerun launched
+- Scored the surviving epoch-6 checkpoint: **test AUC 0.641, F1 tuned 0.193** (val 0.726) - *below* the frozen-resnet pooled baseline (0.678 / 0.212). Confirms the unregularized r2p1d overfit.
+- Per-scenario test: scn31 auc 0.588 | scn33 auc 0.554 | scn34 auc **0.915** (474 win). Scenario 34 is far easier; 31/33 drag the average. Worth a vault page if it repeats.
+- New code (e29c3a8): `--eval-only` flag; R2Plus1DBlockage `freeze_stages` (frozen stem+L1+L2 kept in eval), dropout 0.4->0.5, weight_decay 1e-4->5e-4.
+- Launched **pooled_v2_r2p1d_reg** (chained after eval). Epoch 1: train_loss 0.458, val AUC 0.636.
