@@ -198,3 +198,9 @@ Grep the timeline: `grep "^## \[" log.md | tail -5`.
 - Per-scenario test: scn31 auc 0.588 | scn33 auc 0.554 | scn34 auc **0.915** (474 win). Scenario 34 is far easier; 31/33 drag the average. Worth a vault page if it repeats.
 - New code (e29c3a8): `--eval-only` flag; R2Plus1DBlockage `freeze_stages` (frozen stem+L1+L2 kept in eval), dropout 0.4->0.5, weight_decay 1e-4->5e-4.
 - Launched **pooled_v2_r2p1d_reg** (chained after eval). Epoch 1: train_loss 0.458, val AUC 0.636.
+
+## [2026-06-11] result | s2s5_r2p1d - Scenario 2+5, NATIVE labels, R(2+1)D-18: val AUC 0.968
+- New experiment per user: camera-only, scenarios 2+5 (stationary testbed, real DeepSense `labels_unit1.csv` blockage labels - first native labels in the project), train/val only (85/15, no test), fresh Kinetics weights, v2 regularization (freeze stem+L1+L2, dropout 0.5, wd 5e-4).
+- Data: builder joins labels onto scenarioX.csv by image filename (labels file is power-file-string-ordered with garbage timestamps). 5274 rows, 63 seqs, ~8 Hz frames; 3899 train / 699 val windows.
+- Result: **best val AUC 0.9681 @ep9** (ep1 already 0.964), early stop @19. F1@0.5 noisy (0.0-0.66) - calibration, not ranking; threshold tuning would fix.
+- Read: with real labels + visible testbed blockages the model is excellent -> the 31-34 weakness is the label/visibility problem, not the architecture. Checkpoint: outputs/s2s5_r2p1d/camera_best.pt on GPU box.
