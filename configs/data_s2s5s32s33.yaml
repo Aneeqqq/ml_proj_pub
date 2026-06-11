@@ -1,0 +1,32 @@
+# Scenarios 2+5+32+33: Combined camera blockage dataset
+# Scenarios 2+5: native DeepSense labels (visible traffic blockage)
+# Scenarios 32+33: power-derived i2v labels, audited by visual inspection
+# 12,490 rows, 11.1% blockage rate, train/val/test pooled split
+
+paths:
+  csv: data/dataset_s2s5s32s33.csv
+  data_root: .
+
+window:
+  W: 5
+  K: 1            # t+1 (0.3 s ahead)
+  step_ms: 300
+  tol_ms: 130
+
+split:
+  protocol: pooled
+  ratios: {train: 0.70, val: 0.15, test: 0.15}
+  seed: 42
+
+seq_col: seq_uid
+run_name: s2s5s32s33_r2p1d
+
+camera:
+  image_size: 112
+  norm_mean: [0.43216, 0.394666, 0.37645]
+  norm_std:  [0.22803, 0.22145, 0.216989]
+
+label:
+  column: label
+  positive: blocked
+  negative: not_blocked
