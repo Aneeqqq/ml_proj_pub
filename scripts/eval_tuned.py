@@ -33,6 +33,7 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--data-config", default="data_s2s5.yaml")
     ap.add_argument("--run-name", default=None)
+    ap.add_argument("--arch", default=None, help="override model.arch to match the checkpoint")
     args = ap.parse_args()
 
     dcfg = yaml.safe_load((ROOT / "configs" / args.data_config).read_text())
@@ -42,6 +43,8 @@ def main() -> None:
     run = dcfg.get("run_name", "run")
     outdir = ROOT / "outputs" / run
     mcfg, tcfg = ccfg["model"], ccfg["train"]
+    if args.arch:
+        mcfg["arch"] = args.arch
 
     import torch
     device = "cuda" if torch.cuda.is_available() else "cpu"
