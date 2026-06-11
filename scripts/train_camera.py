@@ -36,9 +36,11 @@ def main() -> None:
     ap.add_argument("--run-name", default=None, help="override data.yaml run_name")
     ap.add_argument("--eval-only", action="store_true",
                     help="skip training; test-eval the existing outputs/<run_name>/camera_best.pt")
+    ap.add_argument("--data-config", default="data.yaml",
+                    help="data config filename in configs/ (e.g. data_s2s5.yaml)")
     args = ap.parse_args()
 
-    dcfg = yaml.safe_load((ROOT / "configs" / "data.yaml").read_text())
+    dcfg = yaml.safe_load((ROOT / "configs" / args.data_config).read_text())
     ccfg = yaml.safe_load((ROOT / "configs" / "camera.yaml").read_text())
     if args.run_name:
         dcfg["run_name"] = args.run_name
@@ -145,7 +147,15 @@ def main() -> None:
         (outdir / "camera_history.json").write_text(json.dumps(history, indent=2))
     print(f"\nbest val auc_mean: {best_auc:.4f}  ->  {best_path}")
 
-    if not args.smoke:
+    if not args.smoke and len(loaders.get("test", []).dataset if "test" in loaders else []) == 0:
+        print("no test split (train/val-only experiment) -> skipping test eval", flush=True)
+        append_run({
+            "run_name": dcfg.get("run_name", "run"), "modality": "camera", "arch": arch,
+            "protocol": dcfg["split"].get("protocol"), "data_config": args.data_config,
+            "alpha": ("sampler" if balanced else tcfg["alpha"]),
+            "K": K, "epochs_ran": ep, "best_val_auc": round(best_auc, 4), "no_test": True,
+        })
+    elif not args.smoke:
         import traceback
         try:
             print("=== TEST EVAL (tuning thresholds on val) ===", flush=True)

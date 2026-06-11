@@ -1,0 +1,31 @@
+# Scenario 2 + 5 experiment (NATIVE blockage labels, camera only, train/val only - no test).
+# Built by scripts/build_dataset_s2s5.py. Use: train_camera --data-config data_s2s5.yaml
+# Frames are ~8 Hz (125 ms median), so the 300 ms / tol 130 ms windowing holds as-is.
+
+paths:
+  csv: data/dataset_s2s5.csv
+  data_root: .
+
+window:
+  W: 5
+  K: 1            # t+1 (0.3 s ahead)
+  step_ms: 300
+  tol_ms: 130
+
+split:
+  protocol: pooled
+  ratios: {train: 0.85, val: 0.15, test: 0.0}   # NO test split per experiment design
+  seed: 42
+
+seq_col: seq_uid
+run_name: s2s5_r2p1d
+
+camera:
+  image_size: 112          # r2plus1d native (overridden to Kinetics stats by arch anyway)
+  norm_mean: [0.43216, 0.394666, 0.37645]
+  norm_std:  [0.22803, 0.22145, 0.216989]
+
+label:
+  column: label            # NATIVE DeepSense blockage label (no derivation)
+  positive: blocked
+  negative: not_blocked
