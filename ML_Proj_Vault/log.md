@@ -204,3 +204,13 @@ Grep the timeline: `grep "^## \[" log.md | tail -5`.
 - Data: builder joins labels onto scenarioX.csv by image filename (labels file is power-file-string-ordered with garbage timestamps). 5274 rows, 63 seqs, ~8 Hz frames; 3899 train / 699 val windows.
 - Result: **best val AUC 0.9681 @ep9** (ep1 already 0.964), early stop @19. F1@0.5 noisy (0.0-0.66) - calibration, not ranking; threshold tuning would fix.
 - Read: with real labels + visible testbed blockages the model is excellent -> the 31-34 weakness is the label/visibility problem, not the architecture. Checkpoint: outputs/s2s5_r2p1d/camera_best.pt on GPU box.
+
+## [2026-06-11] verify | s2s5 scene/timestamp loading is correct
+Rechecked scene loading via timestamps (the make-or-break concern). 63 scenes, 4598 windows:
+- 0 non-monotonic scenes; intra-scene dt median 0.125s (~8 Hz), p95 0.166s.
+- 0 time-range overlaps between consecutive scenes (scenes genuinely distinct).
+- 11 scenes have internal dropped-frame gaps (1.0-1.33s) - handled: windows can't span them.
+- Window builder: 0 cross-scene, 0 gap-spanning (max adjacent gap 0.500s < step+2tol bound 0.560s);
+  worst per-frame deviation from the 0.3s grid 0.120s < tol 0.13. The 37 "jumps" = benign single-drop jitter.
+- Timestamp cross-checks the filename time (image_BS1_396_02_11_07 <-> ['02-11-07-0']).
+Conclusion: s2s5_r2p1d val AUC 0.968 is on scene-coherent, correctly-windowed data.
