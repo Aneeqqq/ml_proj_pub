@@ -1,0 +1,32 @@
+# Scenarios 2+5+32 (audited, vision-grounded labels): 8.5k rows, ~6.2% blockage, train/val/test split.
+# Scenario 2+5: native DeepSense labels (visible traffic)
+# Scenario 32: power-derived i2v labels (89% visually apparent in camera per audit)
+# Built by scripts/build_dataset_s2s5s32.py
+
+paths:
+  csv: data/dataset_s2s5s32.csv
+  data_root: .
+
+window:
+  W: 5
+  K: 1            # t+1 (0.3 s ahead)
+  step_ms: 300
+  tol_ms: 130
+
+split:
+  protocol: pooled
+  ratios: {train: 0.70, val: 0.15, test: 0.15}
+  seed: 42
+
+seq_col: seq_uid
+run_name: s2s5s32_r2p1d
+
+camera:
+  image_size: 112
+  norm_mean: [0.43216, 0.394666, 0.37645]
+  norm_std:  [0.22803, 0.22145, 0.216989]
+
+label:
+  column: label
+  positive: blocked
+  negative: not_blocked
