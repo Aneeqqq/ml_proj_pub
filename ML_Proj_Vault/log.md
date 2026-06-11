@@ -168,6 +168,15 @@ Grep the timeline: `grep "^## \[" log.md | tail -5`.
 - TODO: (1) run POOLED protocol (sanity + paper-comparable); (2) debug radar flat train_loss;
   (3) consider unfreezing camera. Results committed on GPU box (push pending interactive creds). → [[multi-scenario]]
 
+## [2026-06-11] result | pooled_v2_r2p1d (R(2+1)D-18) — incomplete, box went down at epoch 12
+- v2 fixes active (balanced sampler, brightness aug, cosine LR, Kinetics-pretrained video model).
+- 12 epochs ran: best **val AUC 0.726 @ep6**; train_loss 0.44→0.08 (fast overfit), val oscillating
+  0.60–0.73. NOT better than frozen-resnet pooled baseline's val 0.748 so far. No test eval (laptop
+  slept/shut down mid-run; SSH dead). Checkpoint ep6 should exist on box: outputs/pooled_v2_r2p1d/.
+- TODO when box returns: add --eval-only mode or rerun; also pooled_v2_resnet never ran. Consider
+  stronger regularization for r2p1d (it memorizes 12k windows in ~6 epochs: more dropout/weight
+  decay, freeze early stages, or fewer epochs).
+
 ## [2026-06-09] state | Experiments + tracking; SSH-driven GPU runs
 - Diagnosis done (see [[cross-scenario-investigation]]): cross-scenario fails (domain shift: 31/32 day,
   33/34 night, diff intersections); radar has no signal for the 60GHz-fade label; radar model healthy.
