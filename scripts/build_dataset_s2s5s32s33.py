@@ -67,32 +67,21 @@ def process_scenario_2_5():
 
 
 def process_scenario_32():
-    """Process scenario 32 (audited power-derived labels).
+    """Process scenario 32 with the CORRECTED label (fade = blocked).
 
-    Audit mapping: visible → not_blocked, not_visible → blocked
+    The prior audit (scenario32_audit.json) used the opposite convention and inverted
+    the model (test AUC 0.394). The corrected copy scenario32_dev_labelled_CLAUDE.csv
+    carries label_derived = power-fade label (fade=blocked), beam-overlay verified to
+    be correctly oriented. We use it directly.
     """
-    csv_path = ROOT / "scenario32" / "scenario32_dev_labelled.csv"
+    csv_path = ROOT / "scenario32" / "scenario32_dev_labelled_CLAUDE.csv"
 
     if not csv_path.exists():
         print(f"  WARNING: {csv_path} not found, skipping")
         return pd.DataFrame()
 
     df = pd.read_csv(csv_path)
-
-    # Load audit results
-    audit_path = ROOT / "outputs" / "scenario32_audit.json"
-    with open(audit_path) as f:
-        audit = json.load(f)
-
-    # Mapping: visible → not_blocked, not_visible → blocked
-    def get_label(row_idx):
-        audit_result = audit.get(str(int(row_idx)), None)
-        if audit_result == "visible":
-            return "not_blocked"
-        else:  # not_visible or unclear
-            return "blocked"
-
-    df["label"] = df.reset_index(drop=True).index.map(lambda i: get_label(i))
+    df["label"] = df["label_derived"]   # fade=blocked, verified orientation
 
     df["scenario"] = 32
     # time_stamp already in HH:MM:SS-microseconds format; keep as-is
