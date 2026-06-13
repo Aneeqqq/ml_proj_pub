@@ -1,0 +1,32 @@
+# FULL dataset: scenarios 2, 5, 31, 32, 33, 34 (camera blockage).
+# Labels: 2/5 native DeepSense; 31-34 experiment power-fade=blocked (beam-verified orientation).
+# 23,941 rows, 179 sequences, 6.2% blockage. Caveats (domain shift day/night + 6 locations,
+# class imbalance) handled via per-scenario `scenario` column + balanced sampler.
+
+paths:
+  csv: data/dataset_all.csv
+  data_root: .
+
+window:
+  W: 5
+  K: 1            # t+1 (0.3 s ahead)
+  step_ms: 300
+  tol_ms: 130
+
+split:
+  protocol: pooled
+  ratios: {train: 0.70, val: 0.15, test: 0.15}
+  seed: 42
+
+seq_col: seq_uid
+run_name: all_r2p1d
+
+camera:
+  image_size: 112
+  norm_mean: [0.43216, 0.394666, 0.37645]
+  norm_std:  [0.22803, 0.22145, 0.216989]
+
+label:
+  column: label
+  positive: blocked
+  negative: not_blocked
